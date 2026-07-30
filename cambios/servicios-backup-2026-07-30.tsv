@@ -1,0 +1,18 @@
+id_servicio	nombre	categoria	descripcion	duracion_min	precio_desde	precio_hasta	moneda	num_sesiones	requiere_valoracion	profesionales_habilitados	activo
+SRV-001	Consulta y valoración	Preventivo	Evaluación inicial y diagnóstico	30	15000	20000	CRC	1	FALSE	PROF-01;PROF-02;PROF-03;PROF-04;PROF-05;PROF-06	TRUE
+SRV-002	Limpieza dental (profilaxis)	Preventivo	Limpieza y pulido profesional	45	25000	35000	CRC	1	FALSE	PROF-01;PROF-05;PROF-06	TRUE
+SRV-003	Resina / empaste	Restaurativo	Restauración de piezas con caries	45	30000	55000	CRC	1	FALSE	PROF-01	TRUE
+SRV-004	Extracción simple	Restaurativo	Extracción de pieza sin complicaciones	30	20000	35000	CRC	1	FALSE	PROF-01;PROF-04	TRUE
+SRV-005	Extracción quirúrgica	Cirugía	Extracción de piezas retenidas o impactadas	60	60000	120000	CRC	1	TRUE	PROF-04	TRUE
+SRV-006	Endodoncia (tratamiento de conducto)	Restaurativo	Tratamiento de conducto radicular	90	120000	220000	CRC	2	TRUE	PROF-03	TRUE
+SRV-007	Corona dental	Restaurativo	Corona de porcelana o zirconia	60	150000	280000	CRC	2	TRUE	PROF-01;PROF-03	TRUE
+SRV-008	Ortodoncia (brackets metálicos)	Ortodoncia	Corrección con brackets metálicos	45	450000	1200000	CRC	18	TRUE	PROF-02	TRUE
+SRV-009	Ortodoncia invisible (alineadores)	Ortodoncia	Corrección con alineadores transparentes	30	900000	1800000	CRC	14	TRUE	PROF-02	TRUE
+SRV-010	Retenedor post-ortodoncia	Ortodoncia	Retenedor fijo o removible	20	45000	80000	CRC	1	FALSE	PROF-02	TRUE
+SRV-011	Implante dental	Cirugía	Implante de titanio + corona	90	450000	900000	CRC	3	TRUE	PROF-04	TRUE
+SRV-012	Puente dental	Restaurativo	Puente de 3 piezas	90	350000	600000	CRC	3	TRUE	PROF-01	TRUE
+SRV-013	Blanqueamiento dental	Estética	Blanqueamiento profesional en consultorio	60	90000	150000	CRC	1	FALSE	PROF-01	TRUE
+SRV-014	Radiografía dental	Preventivo	Radiografía panorámica o periapical	15	10000	18000	CRC	1	FALSE	PROF-01;PROF-02;PROF-03;PROF-04;PROF-05;PROF-06	TRUE
+SRV-015	Urgencia por dolor	Urgencia	Atención de dolor agudo o trauma dental	30	25000	45000	CRC	1	FALSE	PROF-01;PROF-04	TRUE
+SRV-016	Odontopediatría (consulta niños)	Preventivo	Atención dental para pacientes pediátricos	30	20000	30000	CRC	1	FALSE	PROF-06	TRUE
+SRV-017	Tratamiento periodontal (encías)	Restaurativo	Raspado y alisado radicular	45	60000	120000	CRC	4	TRUE	PROF-05	TRUE
