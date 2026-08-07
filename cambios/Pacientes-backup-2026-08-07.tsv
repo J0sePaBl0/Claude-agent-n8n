@@ -1,0 +1,22 @@
+id_paciente	nombre_completo	telefono	email	fecha_nacimiento	cedula	direccion	sede_preferida	profesional_asignado	estado	fecha_registro	fecha_ultima_visita	canal_origen	alertas_medicas	saldo_pendiente	consentimiento_datos	etiquetas
+PAC-0001	Susana Sánchez Segura	+506 7993-4925	susana.sanchez23@hotmail.com	1975-05-03	3-1799-8461	Curridabat, San José	SEDE-01	PROF-04	Activo	2025-05-01	2026-07-04	WhatsApp		16000	TRUE	
+PAC-0002	Daniela Sánchez Jiménez	+506 8111-9306	daniela.sanchez62@outlook.com	2002-01-12	7-1826-5906	San Francisco, Heredia	SEDE-01	PROF-02	Inactivo	2025-11-22	2025-06-24	WhatsApp		0	TRUE	
+PAC-0003	Jennifer Barrantes Brenes	+506 7218-8801	jennifer.barrantes7@gmail.com	1957-12-21	7-1831-2732	Alajuela Centro, Alajuela	SEDE-01	PROF-03	Activo	2025-04-17	2026-05-26	Referido		111000	TRUE	
+PAC-0004	María Ureña Elizondo	+506 8921-5190	maria.ureña76@outlook.com	2002-06-30	1-1563-6062	Moravia, San José	SEDE-01	PROF-01	Activo	2025-08-23	2026-06-11	WhatsApp		115000	TRUE	ortodoncia
+PAC-0005	Diego Segura Salas	+506 6626-4946	diego.segura76@yahoo.com	2002-12-16	3-1497-5039	Zapote, San José	SEDE-01	PROF-03	Activo	2025-10-13	2026-06-02	WhatsApp	Hipertenso - controlado	0	TRUE	
+PAC-0006	Warner Fernández Araya	+506 8521-7288	warner.fernandez53@outlook.com	1958-07-21	3-1045-7772	San Rafael, Escazú	SEDE-01	PROF-04	Nuevo	2026-07-18		WhatsApp		0	TRUE	
+PAC-0007	Minor Fernández Espinoza	+506 6844-9525	minor.fernandez37@hotmail.com	1984-02-28	1-1658-3225	Escazú Centro, Escazú	SEDE-01	PROF-02	Activo	2025-11-13	2026-07-06	Google		0	TRUE	
+PAC-0008	Rodolfo Vargas Jiménez	+506 8352-6943	rodolfo.vargas28@hotmail.com	1981-12-18	3-1669-6300	San Francisco, Heredia	SEDE-01	PROF-05	Nuevo	2026-06-29		WhatsApp		0	TRUE	
+PAC-0009	Susana Hernández Jiménez	+506 7163-2267	susana.hernandez61@gmail.com	1955-08-18	7-1268-3498	Tibás, San José	SEDE-01	PROF-02	Activo	2026-05-14	2026-07-20	Instagram		0	TRUE	ortodoncia
+PAC-0010	Carlos Montero Chacón	+506 7560-8150	carlos.montero5@hotmail.com	1974-03-29	5-1451-0804	Rohrmoser, San José	SEDE-01	PROF-02	Inactivo	2025-02-12	2025-04-26	Referido		0	FALSE	
+PAC-0011	Jennifer Villalobos Gómez	+506 8600-1916	jennifer.villalobos7@yahoo.com	1956-03-04	4-1744-8717	Sabana Sur, San José	SEDE-01	PROF-03	Activo	2025-12-31	2026-06-02	Referido		0	TRUE	ortodoncia
+PAC-0012	Melissa Rodríguez Ureña	+506 8834-9915	melissa.rodriguez20@outlook.com	1979-10-15	4-1320-1226	San Pedro, Montes de Oca	SEDE-01	PROF-03	Activo	2025-09-09	2026-05-07	Referido		0	FALSE	
+PAC-0013	Fernando Salas Cordero	+506 6388-3205	fernando.salas87@gmail.com	1977-03-21	1-1270-6063	Tibás, San José	SEDE-01	PROF-01	Activo	2026-01-24	2026-06-08	Google	Embarazo (2do trimestre)	0	TRUE	
+PAC-0014	Fernando Alvarado Solano	(+506) 8709-1734	fernando.alvarado85@outlook.com	1963-10-23	7-1032-7598	Moravia, San José	SEDE-01	PROF-04	Activo	2026-03-02	2026-07-16	Instagram		0	TRUE	
+PAC-0015	Roberto Brenes Castro	(+506) 8809-5082	roberto.brenes87@gmail.com	1979-02-09	5-1886-1897	San Pedro, Montes de Oca	SEDE-01	PROF-06	Inactivo	2025-09-04	2025-08-28	Google		91000	TRUE	ortodoncia
+PAC-0016	Marco Hernández Araya	(+506) 6305-1752	marco.hernandez18@gmail.com	1995-11-07	5-1809-7529	Curridabat, San José	SEDE-01	PROF-05	Inactivo	2025-06-12	2025-11-10	WhatsApp		56000	TRUE	ortodoncia
+PAC-0017	Shirley Solano Segura	(+506) 7457-8084	shirley.solano23@hotmail.com	1988-12-31	2-1670-3523	Barrio Amón, San José	SEDE-01	PROF-01	Activo	2026-01-09	2026-05-12	WhatsApp	Diabético tipo 2	0	TRUE	VIP
+PAC-0018	Fernando Barrantes Araya	(+506) 8206-3131	fernando.barrantes70@hotmail.com	1992-10-10	5-1257-3777	La Uruca, San José	SEDE-01	PROF-01	Activo	2026-01-12	2026-07-20	WhatsApp		0	TRUE	
+PAC-0019	Andrés Miranda Zúñiga	(+506) 7381-5101	andres.miranda21@outlook.com	1957-01-04	7-1681-8811	San Rafael, Escazú	SEDE-01	PROF-02	Nuevo	2026-07-08		Google	Embarazo (2do trimestre)	13000	FALSE	
+PAC-0020	Carolina Miranda Elizondo	(+506) 6414-3666	carolina.miranda34@gmail.com	1992-01-08	4-1130-0707	Alajuela Centro, Alajuela	SEDE-01	PROF-04	Activo	2025-06-08	2026-06-04	WhatsApp		0	TRUE	
+PAC-0021	Jp	50660181661					SEDE-01		Nuevo	2026-08-07		WhatsApp			TRUE	

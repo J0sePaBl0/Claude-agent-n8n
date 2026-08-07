@@ -1,0 +1,7 @@
+id_profesional	nombre	especialidad	sede	dias_atencion	horario	duracion_slot_min	activo
+PROF-01	Dra. Ana Jiménez Rojas	Odontología general	SEDE-01	Lun;Mar;Mié;Jue;Vie	08:00-17:00	30	TRUE
+PROF-02	Dr. Luis Vargas Solano	Ortodoncia	SEDE-01	Lun;Mié;Vie	09:00-18:00	45	TRUE
+PROF-03	Dra. Karla Castro Araya	Endodoncia	SEDE-01	Mar;Jue	09:00-17:00	60	TRUE
+PROF-04	Dr. Esteban Mora Chacón	Cirugía	SEDE-01	Lun;Mar;Jue	10:00-18:00	60	TRUE
+PROF-05	Dra. Silvia Fernández Gómez	Periodoncia	SEDE-01	Mié;Vie	08:00-16:00	45	TRUE
+PROF-06	Dra. Paola Hernández Villalobos	Odontopediatría	SEDE-01	Lun;Mar;Mié;Jue	08:00-15:00	30	TRUE

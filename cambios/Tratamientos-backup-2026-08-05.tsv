@@ -1,0 +1,11 @@
+id_tratamiento	id_paciente	id_servicio	id_profesional	estado	fecha_inicio	fecha_fin_estimada	fecha_fin_real	sesiones_totales	sesiones_completadas	costo_total	id_oportunidad_origen	notas_clinicas	fecha_creacion
+TRAT-0001	PAC-0016	SRV-008	PROF-02	Planificado	2026-08-10	2028-02-01		18	0	999000	OPP-0003	Buena evolución, sin complicaciones	2026-08-08 17:30
+TRAT-0002	PAC-0009	SRV-009	PROF-02	Completado	2025-04-23	2026-06-17	2026-05-18	14	14	1749000	OPP-0012	Requiere extracción previa de premolar	2025-04-18 16:15
+TRAT-0003	PAC-0014	SRV-006	PROF-03	Planificado	2026-08-09	2026-09-06		2	0	190000		Requiere extracción previa de premolar	2026-08-05 10:00
+TRAT-0004	PAC-0004	SRV-009	PROF-02	Planificado	2026-08-11	2027-10-05		14	0	1616000		Requiere ajuste de placa en próxima cita	2026-08-06 17:30
+TRAT-0005	PAC-0019	SRV-017	PROF-05	En progreso	2026-05-16	2026-08-08		4	3	118000		Buena evolución, sin complicaciones	2026-05-11 10:30
+TRAT-0006	PAC-0001	SRV-017	PROF-05	En progreso	2026-07-05	2026-09-27		4	1	63000		Paciente con sensibilidad alta	2026-07-01 13:00
+TRAT-0007	PAC-0015	SRV-009	PROF-02	En progreso	2026-03-13	2027-05-07		14	4	1274000		Requiere ajuste de placa en próxima cita	2026-03-09 09:30
+TRAT-0008	PAC-0010	SRV-006	PROF-03	Completado	2026-06-10	2026-07-08	2026-06-28	2	2	135000			2026-06-08 14:00
+TRAT-0009	PAC-0003	SRV-006	PROF-03	Cancelado	2026-06-30	2026-07-28		2	1	214000		Cancelado a solicitud del paciente	2026-06-26 17:15
+TRAT-0010	PAC-0011	SRV-008	PROF-02	Completado	2025-01-24	2026-07-18	2026-06-20	18	18	975000		Buena evolución, sin complicaciones	2025-01-22 13:30

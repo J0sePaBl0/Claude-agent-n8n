@@ -1,0 +1,10 @@
+id_sede	nombre	direccion	latitud	longitud	link_maps	telefono	horario_atencion	whatsapp			estado_paciente	canal_origen	etapa_oportunidad	intencion	sentimiento	urgencia	estado_cita	canal_agendamiento	creada_por	categoria_servicio	especialidad	estado_tratamiento	canal_actividad	tipo_actividad	direccion_actividad	generado_por	estado_pago	metodo_pago	prioridad	estado_espera
+SEDE-01	Clínica Dental Sonrisa	Avenida Central, San José, Costa Rica	9.9333	-84.0833	https://maps.google.com/?q=9.9333,-84.0833	+506 2222-3344	Lun-Vie 08:00-18:00, Sáb 08:00-12:00	+506 8888-9900			Nuevo	WhatsApp	Nuevo	Info precio	Positivo	Alta	Solicitada	Bot WhatsApp	Bot	Preventivo	Odontología general	Planificado	WhatsApp	Msg entrante	Entrante	Bot	Pendiente	Efectivo	Alta	En espera
+											Activo	Instagram	Contactado	Agendar	Neutro	Media	Confirmada	Recepción	Humano	Restaurativo	Ortodoncia	En progreso	Llamada	Msg saliente	Saliente	Humano	Parcial	Tarjeta	Media	Notificado
+											Inactivo	Referido	Calificado	Urgencia dolor	Negativo	Baja	Reprogramada	Web		Estética	Endodoncia	Pausado	Email	Recordatorio		Sistema	Pagado	Transferencia	Baja	Agendado
+												Google	Cita agendada	Reprogramar			Cancelada			Ortodoncia	Cirugía	Completado		Confirmación			Vencido	Financiado		Descartado
+													Presupuesto	Reclamo			Completada			Cirugía	Periodoncia	Cancelado		Seguimiento						
+													Ganada				No asistió			Urgencia	Odontopediatría			Escalamiento						
+													Perdida								Estética			Documento						
+																								Recordatorio pago						
+																								Campaña						

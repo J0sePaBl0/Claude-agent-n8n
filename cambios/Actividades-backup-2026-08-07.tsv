@@ -1,0 +1,79 @@
+id_actividad	fecha_hora	id_paciente	id_oportunidad	id_cita	canal	tipo	direccion	resumen	intencion	sentimiento	generado_por	requiere_seguimiento	url_documento
+ACT-00001	2026-07-22 15:30		OPP-0001		Llamada	Msg entrante	Entrante	Consulta inicial sobre Limpieza dental (profilaxis)	Urgencia dolor	Neutro	Bot	FALSE	
+ACT-00002	2026-07-22 15:15		OPP-0001		Llamada	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Urgencia dolor	Neutro	Bot	FALSE	
+ACT-00005	2026-05-21 17:30		OPP-0002		Email	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Info precio	Positivo	Bot	FALSE	
+ACT-00007	2026-07-12 16:40	PAC-0016	OPP-0003		WhatsApp	Msg entrante	Entrante	Consulta inicial sobre Ortodoncia (brackets metálicos)	Agendar	Positivo	Bot	FALSE	
+ACT-00008	2026-07-12 19:30	PAC-0016	OPP-0003		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Agendar	Positivo	Bot	FALSE	
+ACT-00010	2026-05-18 13:00		OPP-0004		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Reclamo	Negativo	Bot	FALSE	
+ACT-00011	2026-05-18 10:15		OPP-0004		WhatsApp	Escalamiento	Saliente	Conversación escalada a personal de la clínica	Reclamo	Negativo	Bot	TRUE	
+ACT-00013	2026-06-30 12:05		OPP-0005		Llamada	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Urgencia dolor	Positivo	Bot	FALSE	
+ACT-00014	2026-07-08 09:10		OPP-0005		Llamada	Seguimiento	Saliente	Seguimiento de oportunidad abierta	Urgencia dolor	Positivo	Bot	TRUE	
+ACT-00015	2026-06-30 12:15		OPP-0005		Llamada	Escalamiento	Saliente	Conversación escalada a personal de la clínica	Urgencia dolor	Positivo	Bot	TRUE	
+ACT-00018	2026-07-29 08:20		OPP-0006		Email	Seguimiento	Saliente	Seguimiento de oportunidad abierta	Agendar	Neutro	Bot	TRUE	
+ACT-00019	2026-07-17 11:30		OPP-0006		Email	Escalamiento	Saliente	Conversación escalada a personal de la clínica	Agendar	Neutro	Bot	TRUE	
+ACT-00020	2026-04-18 10:15		OPP-0007		WhatsApp	Msg entrante	Entrante	Consulta inicial sobre Radiografía dental	Agendar	Neutro	Bot	FALSE	
+ACT-00021	2026-04-18 16:20		OPP-0007		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Agendar	Neutro	Bot	FALSE	
+ACT-00022	2026-04-25 08:00		OPP-0007		WhatsApp	Seguimiento	Saliente	Seguimiento de oportunidad abierta	Agendar	Neutro	Bot	TRUE	
+ACT-00024	2026-04-09 16:50	PAC-0017	OPP-0008		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Reprogramar	Neutro	Bot	FALSE	
+ACT-00028	2026-05-24 12:30		OPP-0010		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Agendar	Negativo	Bot	FALSE	
+ACT-00029	2026-05-24 16:20		OPP-0010		WhatsApp	Escalamiento	Saliente	Conversación escalada a personal de la clínica	Agendar	Negativo	Bot	TRUE	
+ACT-00030	2026-07-09 19:50	PAC-0002	OPP-0011		WhatsApp	Msg entrante	Entrante	Consulta inicial sobre Blanqueamiento dental	Agendar	Neutro	Bot	FALSE	
+ACT-00031	2026-07-09 16:20	PAC-0002	OPP-0011		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Agendar	Neutro	Bot	FALSE	
+ACT-00035	2026-05-15 16:50	PAC-0009	OPP-0012		WhatsApp	Msg saliente	Saliente	Respuesta automática con información y opciones de agenda	Agendar	Positivo	Bot	FALSE	
+ACT-00036	2026-05-15 07:00	PAC-0009	OPP-0012		WhatsApp	Escalamiento	Saliente	Conversación escalada a personal de la clínica	Agendar	Positivo	Bot	TRUE	
+ACT-00037	2026-08-09 10:20	PAC-0016	OPP-0003	CITA-0001	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00038	2026-08-09 09:40	PAC-0016	OPP-0003	CITA-0001	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00039	2026-09-08 17:05	PAC-0016	OPP-0003	CITA-0002	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00040	2026-04-19 10:40	PAC-0009	OPP-0012	CITA-0003	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00041	2026-04-19 17:45	PAC-0009	OPP-0012	CITA-0003	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00043	2026-05-17 19:10	PAC-0009	OPP-0012	CITA-0004	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00046	2026-08-10 11:30	PAC-0014		CITA-0005	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00047	2026-08-10 14:50	PAC-0014		CITA-0005	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00048	2026-08-11 12:15	PAC-0004		CITA-0007	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00049	2026-08-11 17:50	PAC-0004		CITA-0007	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00050	2026-06-09 16:50	PAC-0019		CITA-0009	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00051	2026-06-09 14:00	PAC-0019		CITA-0009	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00053	2026-06-30 19:50	PAC-0019		CITA-0010	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00054	2026-06-30 16:00	PAC-0019		CITA-0010	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00055	2026-07-02 19:00	PAC-0019		CITA-0010	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00056	2026-08-04 09:00	PAC-0019		CITA-0011	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00058	2026-07-07 10:10	PAC-0001		CITA-0012	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00060	2026-07-09 20:30	PAC-0001		CITA-0012	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00061	2026-08-06 12:50	PAC-0001		CITA-0013	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00063	2026-08-18 12:15	PAC-0001		CITA-0014	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00064	2026-05-12 14:15	PAC-0015		CITA-0015	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00065	2026-05-12 20:20	PAC-0015		CITA-0015	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00066	2026-05-14 07:15	PAC-0015		CITA-0015	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00067	2026-06-11 07:40	PAC-0015		CITA-0016	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00068	2026-06-11 16:00	PAC-0015		CITA-0016	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00069	2026-06-13 09:00	PAC-0015		CITA-0016	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00070	2026-04-12 17:20	PAC-0015		CITA-0017	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00071	2026-04-12 17:45	PAC-0015		CITA-0017	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00072	2026-08-25 14:15	PAC-0015		CITA-0018	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00073	2026-08-25 20:40	PAC-0015		CITA-0018	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00074	2026-08-09 17:00	PAC-0015		CITA-0019	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00075	2026-06-10 09:50	PAC-0010		CITA-0020	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00077	2026-06-12 17:45	PAC-0010		CITA-0020	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00078	2026-06-24 13:05	PAC-0010		CITA-0021	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00079	2026-06-24 11:40	PAC-0010		CITA-0021	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00080	2026-06-26 07:15	PAC-0010		CITA-0021	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00081	2026-06-29 16:30	PAC-0003		CITA-0022	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00082	2026-06-29 16:50	PAC-0003		CITA-0022	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00083	2026-07-01 12:40	PAC-0003		CITA-0022	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00084	2026-05-19 10:15	PAC-0011		CITA-0023	WhatsApp	Recordatorio	Saliente	Recordatorio de cita en 24h con ubicación y ETA			Sistema	FALSE	
+ACT-00086	2026-05-21 20:45	PAC-0011		CITA-0023	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00088	2026-06-18 20:05	PAC-0011		CITA-0024	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00089	2026-06-20 09:20	PAC-0011		CITA-0024	WhatsApp	Seguimiento	Saliente	Seguimiento post-consulta: indicaciones y cuidados			Bot	FALSE	
+ACT-00091	2025-06-22 08:40	PAC-0011		CITA-0025	WhatsApp	Confirmación	Entrante	Paciente confirma asistencia a la cita			Bot	FALSE	
+ACT-00093	2026-06-20 13:40	PAC-0011		CITA-0024	Email	Documento	Saliente	Envío de indicaciones post-tratamiento en PDF			Bot	FALSE	https://clinica-demo.example.com/docs/cuidados-post-tratamiento.pdf
+ACT-00094	2026-07-09 10:30	PAC-0001		CITA-0012	Email	Documento	Saliente	Envío de indicaciones post-tratamiento en PDF			Bot	FALSE	https://clinica-demo.example.com/docs/cuidados-post-tratamiento.pdf
+ACT-00095	2026-07-01 13:15	PAC-0003		CITA-0022	Email	Documento	Saliente	Envío de indicaciones post-tratamiento en PDF			Bot	FALSE	https://clinica-demo.example.com/docs/cuidados-post-tratamiento.pdf
+ACT-00097	2026-07-02 10:05	PAC-0019		CITA-0010	Email	Documento	Saliente	Envío de indicaciones post-tratamiento en PDF			Bot	FALSE	https://clinica-demo.example.com/docs/cuidados-post-tratamiento.pdf
+ACT-00098	2026-08-07 11:08	PAC-0021	OPP-0013	CITA-0026	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-13 10:00	Agendar	Positivo	Bot	FALSE	
+ACT-00099	2026-08-07 11:38	PAC-0021	OPP-0013	CITA-0027	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-10 09:00	Agendar	Positivo	Bot	FALSE	
+ACT-00100	2026-08-07 11:42	PAC-0021	OPP-0013	CITA-0027	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-11 09:00	Agendar	Positivo	Bot	FALSE	
+ACT-00101	2026-08-07 14:05	PAC-0021	OPP-0013	CITA-0026	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-13 16:00	Agendar	Positivo	Bot	FALSE	
+ACT-00102	2026-08-07 15:25	PAC-0021	OPP-0013	CITA-0026	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-13 10:00	Agendar	Positivo	Bot	FALSE	
+ACT-00103	2026-08-07 16:04	PAC-0021	OPP-0013	CITA-0027	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-08 08:00	Agendar	Positivo	Bot	FALSE	
+ACT-00104	2026-08-07 16:05	PAC-0021	OPP-0013	CITA-0027	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-08 08:00	Agendar	Positivo	Bot	FALSE	
+ACT-00105	2026-08-07 16:10	PAC-0021	OPP-0013	CITA-0027	WhatsApp	Confirmación	Entrante	Cita solicitada por el bot: Consulta y valoración, 2026-08-08 08:00	Agendar	Positivo	Bot	FALSE	

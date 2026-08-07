@@ -1,0 +1,39 @@
+id_servicio	nombre	categoria	descripcion	duracion_min	precio_desde	precio_hasta	moneda	num_sesiones	requiere_valoracion	profesionales_habilitados	activo	prima	mensualidad
+SRV-001	Consulta y valoración	Preventivo	Examen clínico completo, plan de tratamiento por escrito y radiografías periapicales necesarias para el diagnóstico. Es gratuita si el paciente inicia tratamiento de ortodoncia o de implantes dentro de los 30 días siguientes.	30	15000	15000	CRC	1	FALSE	PROF-01;PROF-02;PROF-03;PROF-04;PROF-05;PROF-06	TRUE		
+SRV-002	Limpieza dental (profilaxis)	Preventivo	Limpieza y pulido profesional.	45	25000	25000	CRC	1	FALSE	PROF-01;PROF-05;PROF-06	TRUE		
+SRV-017	Limpieza profunda (raspado y alisado radicular)	Preventivo	Raspado y alisado radicular. El precio es POR CUADRANTE; la boca completa son 4 cuadrantes, es decir 4 sesiones.	60	35000	35000	CRC	1	TRUE	PROF-05	TRUE		
+SRV-018	Aplicación de flúor	Preventivo	Aplicación tópica de flúor.	15	8000	8000	CRC	1	FALSE	PROF-01;PROF-06	TRUE		
+SRV-019	Sellantes de fosas y fisuras	Preventivo	Sellado preventivo. El precio es POR PIEZA.	20	12000	12000	CRC	1	FALSE	PROF-01;PROF-06	TRUE		
+SRV-004	Extracción simple	Cirugía	Extracción de pieza sin complicaciones. El precio es POR PIEZA.	30	30000		CRC	1	FALSE	PROF-01;PROF-04	TRUE		
+SRV-020	Extracción de muela del juicio no retenida	Cirugía	Extracción de cordal que no requiere cirugía. El precio es POR PIEZA.	45	55000		CRC	1	TRUE	PROF-04	TRUE		
+SRV-005	Extracción de muela del juicio retenida (con cirugía)	Cirugía	Extracción quirúrgica de cordal retenida o incluida. El precio es POR PIEZA.	60	120000		CRC	1	TRUE	PROF-04	TRUE		
+SRV-003	Restauración de resina (una superficie)	Restaurativo	Restauración de una superficie. El precio es POR PIEZA.	45	30000	30000	CRC	1	FALSE	PROF-01	TRUE		
+SRV-021	Restauración de resina (dos o tres superficies)	Restaurativo	Restauración de dos o tres superficies. El precio es POR PIEZA.	60	40000	40000	CRC	1	FALSE	PROF-01	TRUE		
+SRV-022	Incrustación de porcelana	Restaurativo	Incrustación de porcelana. El precio es POR PIEZA.	60	180000	180000	CRC	2	TRUE	PROF-01;PROF-03	TRUE		
+SRV-007	Corona de zirconio	Restaurativo	Corona de zirconio. Requiere dos citas con quince días de diferencia. El precio es POR PIEZA.	60	320000	320000	CRC	2	TRUE	PROF-01;PROF-03	TRUE		
+SRV-023	Corona de metal porcelana	Restaurativo	Corona de metal porcelana. El precio es POR PIEZA.	60	250000	250000	CRC	2	TRUE	PROF-01;PROF-03	TRUE		
+SRV-006	Endodoncia de pieza anterior (un conducto)	Restaurativo	Tratamiento de conducto en pieza anterior. La mayoría se completa en una sola cita de 90 a 120 minutos. Las endodoncias se realizan los martes y los jueves.	120	130000	130000	CRC	1	TRUE	PROF-03	TRUE		
+SRV-024	Endodoncia de premolar (dos conductos)	Restaurativo	Tratamiento de conducto en premolar. La mayoría se completa en una sola cita de 90 a 120 minutos. Las endodoncias se realizan los martes y los jueves.	120	160000	160000	CRC	1	TRUE	PROF-03	TRUE		
+SRV-025	Endodoncia de molar (tres o más conductos)	Restaurativo	Tratamiento de conducto en molar. La mayoría se completa en una sola cita de 90 a 120 minutos. Las endodoncias se realizan los martes y los jueves.	120	195000	195000	CRC	1	TRUE	PROF-03	TRUE		
+SRV-026	Retratamiento de endodoncia	Restaurativo	Retratamiento de un conducto ya tratado. Las endodoncias se realizan los martes y los jueves.	120	220000		CRC	1	TRUE	PROF-03	TRUE		
+SRV-013	Blanqueamiento dental en consultorio	Estética	Blanqueamiento profesional en consultorio. Sesión única de 90 minutos.	90	145000	145000	CRC	1	FALSE	PROF-01	TRUE		
+SRV-027	Blanqueamiento con férulas para uso en casa	Estética	Incluye férulas personalizadas y gel para dos semanas.	30	110000	110000	CRC	1	FALSE	PROF-01	TRUE		
+SRV-028	Carilla de resina	Estética	Carilla de resina. El precio es POR PIEZA.	60	95000	95000	CRC	1	TRUE	PROF-01	TRUE		
+SRV-029	Carilla de porcelana	Estética	Carilla de porcelana. El precio es POR PIEZA.	90	290000	290000	CRC	2	TRUE	PROF-01	TRUE		
+SRV-030	Diseño de sonrisa digital	Estética	Planificación digital de la sonrisa. El monto se acredita al tratamiento si el paciente lo inicia.	60	60000	60000	CRC	1	FALSE	PROF-01	TRUE		
+SRV-008	Ortodoncia con brackets metálicos	Ortodoncia	Se cobra con una prima inicial más una mensualidad. Duración estimada de 18 a 24 meses. Las citas de control son cada cuatro semanas y duran 30 minutos. El rango de precio es el total estimado del tratamiento.	30	990000	1260000	CRC	18	TRUE	PROF-02	TRUE	180000	45000
+SRV-031	Ortodoncia con brackets estéticos de zafiro	Ortodoncia	Se cobra con una prima inicial más una mensualidad. Duración estimada de 18 a 24 meses. Las citas de control son cada cuatro semanas y duran 30 minutos. El rango de precio es el total estimado del tratamiento.	30	1240000	1570000	CRC	18	TRUE	PROF-02	TRUE	250000	55000
+SRV-009	Ortodoncia invisible (alineadores transparentes)	Ortodoncia	Tratamiento completo con alineadores transparentes. Hay opción de financiamiento a doce meses.	30	1800000		CRC	14	TRUE	PROF-02	TRUE		
+SRV-010	Retenedores post-ortodoncia	Ortodoncia	Juego superior e inferior.	20	90000	90000	CRC	1	FALSE	PROF-02	TRUE		
+SRV-011	Implante dental completo	Cirugía	Incluye implante, pilar y corona. El proceso completo toma entre cuatro y seis meses.	90	850000	850000	CRC	3	TRUE	PROF-04	TRUE		
+SRV-032	Injerto óseo	Cirugía	Se realiza cuando el caso lo requiere, previo a un implante.	60	180000		CRC	1	TRUE	PROF-04	TRUE		
+SRV-033	Prótesis total removible	Restaurativo	El precio es POR ARCADA.	60	380000	380000	CRC	3	TRUE	PROF-01	TRUE		
+SRV-034	Prótesis parcial removible	Restaurativo	Prótesis parcial removible.	60	290000		CRC	3	TRUE	PROF-01	TRUE		
+SRV-016	Consulta y valoración para niño	Preventivo	Consulta de odontopediatría. La primera visita se recomienda al cumplir el primer año de edad o cuando aparece el primer diente.	30	12000	12000	CRC	1	FALSE	PROF-06	TRUE		
+SRV-035	Limpieza dental infantil con aplicación de flúor	Preventivo	Limpieza dental para pacientes pediátricos, incluye aplicación de flúor.	30	22000	22000	CRC	1	FALSE	PROF-06	TRUE		
+SRV-036	Restauración en diente de leche	Restaurativo	Restauración en pacientes pediátricos. El precio es POR PIEZA.	30	25000	25000	CRC	1	FALSE	PROF-06	TRUE		
+SRV-037	Pulpotomía	Restaurativo	Pulpotomía en diente de leche. El precio es POR PIEZA.	45	55000	55000	CRC	1	TRUE	PROF-06	TRUE		
+SRV-038	Corona de acero inoxidable para diente de leche	Restaurativo	Corona de acero inoxidable en pacientes pediátricos. El precio es POR PIEZA.	45	65000	65000	CRC	1	TRUE	PROF-06	TRUE		
+SRV-012	Puente dental	Restaurativo	NO SE OFRECE. No aparece en el catálogo oficial de la clínica; las prótesis parcial y total removible cubren estos casos.	90			CRC	3	TRUE	PROF-01	FALSE		
+SRV-014	Radiografía dental	Preventivo	NO SE COBRA APARTE. Las radiografías periapicales necesarias para el diagnóstico van incluidas en la cita de valoración.	15			CRC	1	FALSE	PROF-01;PROF-02;PROF-03;PROF-04;PROF-05;PROF-06	FALSE		
+SRV-015	Urgencia por dolor	Urgencia	NO SE OFRECE COMO SERVICIO TARIFADO. No aparece en el catálogo oficial de la clínica.	30			CRC	1	FALSE	PROF-01;PROF-04	FALSE		

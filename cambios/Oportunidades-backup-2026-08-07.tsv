@@ -1,0 +1,14 @@
+id_oportunidad	id_paciente	nombre_lead	telefono	fecha_creacion	canal_origen	servicio_interes	etapa	valor_estimado	intencion	sentimiento	urgencia	requiere_humano	asignado_a	fecha_seguimiento	motivo_perdida	notas	fecha_ultima_interaccion
+OPP-0001		Manuel Rojas Castro	+506 8151-5872	2026-07-22 09:30	WhatsApp	SRV-002	Contactado	33000	Urgencia dolor	Neutro	Alta	TRUE	Bot	2026-07-31			
+OPP-0002		Jennifer Quesada Vargas	+506 7460-5422	2026-05-21 20:30	WhatsApp	SRV-008	Nuevo	1175000	Info precio	Positivo	Media	FALSE	PROF-02	2026-06-03			
+OPP-0003	PAC-0016	Marco Hernández Araya	+506 6305-1752	2026-07-12 16:45	WhatsApp	SRV-008	Ganada	841000	Agendar	Positivo	Baja	FALSE	PROF-04				
+OPP-0004		Fernando Blanco Alvarado	+506 6138-6201	2026-05-18 15:15	WhatsApp	SRV-011	Contactado	591000	Reclamo	Negativo	Baja	TRUE	Bot	2026-05-22			
+OPP-0005		Luis Montero Brenes	+506 6622-3149	2026-06-30 18:00	WhatsApp	SRV-017	Nuevo	91000	Urgencia dolor	Positivo	Alta	TRUE	Bot	2026-07-08			
+OPP-0006		Roberto Gómez Quesada	+506 8504-7592	2026-07-17 08:00	WhatsApp	SRV-011	Cita agendada	680000	Agendar	Neutro	Alta	TRUE	Bot	2026-07-29			
+OPP-0007		Carlos Brenes Miranda	+506 6440-4280	2026-04-18 09:30	WhatsApp	SRV-014	Cita agendada	18000	Agendar	Neutro	Baja	FALSE	Bot	2026-04-25			
+OPP-0008	PAC-0017	Shirley Solano Segura	+506 7457-8084	2026-04-09 20:45	WhatsApp	SRV-007	Presupuesto	201000	Reprogramar	Neutro	Media	FALSE	PROF-02	2026-04-12			
+OPP-0009		Warner Chacón Salas	+506 7602-8478	2026-07-14 15:30	WhatsApp	SRV-009	Calificado	1349000	Agendar	Positivo	Media	FALSE	Bot	2026-07-22			
+OPP-0010		Andrés Rojas Jiménez	+506 6768-4254	2026-05-24 15:45	Google	SRV-002	Perdida	31000	Agendar	Negativo	Baja	TRUE	Bot		Sin tiempo disponible		
+OPP-0011	PAC-0002	Daniela Sánchez Jiménez	+506 8111-9306	2026-07-09 09:45	WhatsApp	SRV-013	Calificado	116000	Agendar	Neutro	Alta	TRUE	Bot	2026-07-23			
+OPP-0012	PAC-0009	Susana Hernández Jiménez	+506 7163-2267	2026-05-15 20:00	Instagram	SRV-009	Ganada	1466000	Agendar	Positivo	Alta	TRUE	Bot				
+OPP-0013	PAC-0021	Jp	(+506) 6018-1661	2026-08-07 11:51	WhatsApp	SRV-001	Cita agendada		Info precio	Neutro	Media		Bot			Lead generado automáticamente desde WhatsApp. Primer mensaje: "quiero agendar una cita de valoracion" [2026-08-07 13:54] hola [2026-08-07 13:54] quiero agendar una cita [2026-08-07 13:54] seria para valoracion [2026-08-07 13:55] de la proxima semana tiene espacios algun dia a las 4? [2026-08-07 13:55] el jueves [2026-08-07 13:56] deseo reservar si [2026-08-07 15:23] hola [2026-08-07 15:24] quiero agendar una cita [2026-08-07 15:24] la valoracion el jueves 13 de agosto [2026-08-07 15:25] a las 10 am [2026-08-07 15:25] correcto	2026-08-07 16:10
