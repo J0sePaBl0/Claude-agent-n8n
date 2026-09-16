@@ -1,0 +1,6 @@
+Dice qué espacios tiene libres el gimnasio para un servicio.
+Devuelve: interpretacion (cómo entendió lo que pidió el cliente, repetíselo para confirmar),
+disponible (true/false), alternativas (lista de horarios concretos con fecha, hora y entrenador)
+y mensaje (redactado, parafrasealo).
+Úsala SIEMPRE antes de proponerle un horario a alguien. Nunca inventes horarios ni los copies
+de un mensaje anterior de la conversación: los espacios se ocupan.

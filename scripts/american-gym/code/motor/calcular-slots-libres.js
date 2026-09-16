@@ -1,24 +1,26 @@
-// Calcula los espacios libres reales combinando Servicios, Profesionales, Citas,
-// Feriados y el horario de la sede. Implementa las reglas de DM_01 y DM_03.
+// Calcula los espacios libres reales combinando Servicios, Entrenadores, Citas,
+// Feriados y el horario de la sede.
 //
-// Las reglas de DÍA por especialidad (endodoncia mar/jue, ortodoncia L/X/V mañana,
-// implantes mié tarde o sáb) NO están codificadas acá: salen solas del cruce
-// profesionales_habilitados x dias_atencion.
+// Qué días atiende cada servicio NO está codificado acá: sale solo del cruce
+// entrenadores_habilitados x dias_atencion. Para cambiarlo se edita el Sheet.
 const TZ = 'America/Costa_Rica';
-const MINUTOS_ANTES_DEL_CIERRE = 60;   // DM_01: el último espacio, una hora antes del cierre
-const TOPE_LARGO_SEMANA = 16 * 60;     // DM_03: nada de +90 min después de las 4:00 p.m.
-const TOPE_LARGO_SABADO = 11 * 60;     // DM_03: ni después de las 11:00 los sábados
-const DURACION_LARGA = 90;
+const MINUTOS_ANTES_DEL_CIERRE = 60;   // el último espacio termina una hora antes del cierre
 const HORAS_DE_ANTICIPACION = 2;       // no se ofrece un espacio que arranca ya mismo
 const DIAS_HORIZONTE = 21;
-const URGENCIAS = { 'PROF-01': [['10:00', '10:30'], ['15:00', '15:30']] };  // DM_01: 2 espacios diarios
+// Reglas que dependen del tipo de cita (valoración/evaluación previa). Apagadas en American
+// Gym por decisión del proyecto (2026-09-11): cualquier cliente agenda cualquier servicio. El
+// camino queda escrito para poder encenderlo; con `false` no se calcula nada de esto.
+const REGLAS_POR_TIPO = false;
+// Estados de cita que ocupan el espacio. `Reprogramada` también: en Dulce María faltaba y una
+// cita movida dejaba su nuevo espacio libre para otro.
+const ESTADOS_QUE_OCUPAN = ['Solicitada', 'Confirmada', 'Reprogramada'];
 
 const entrada = $('Normalizar entrada').first().json;
 const pedido = $('Interpretar la fecha').first().json;
 
 const datos = $('Preparar datos').first().json;
 const servicios = datos.servicios;
-const profesionales = datos.profesionales;
+const entrenadores = datos.entrenadores;
 const citas = datos.citas;
 const feriados = new Set(datos.feriados.map((f) => String(f.fecha || '').trim()));
 const sede = datos.config[0] || {};
@@ -45,25 +47,39 @@ const idServicioEfectivo = txt($('Localizar cita').first().json.id_servicio) || 
 const servicio = servicios.find((s) => txt(s.id_servicio) === idServicioEfectivo);
 if (!servicio) {
   return salir('servicio_no_disponible',
-    'No encuentro ese servicio en el catálogo de la clínica.');
+    'No encuentro ese servicio en el catálogo del gimnasio.');
 }
 if (!esVerdadero(servicio.activo)) {
   return salir('servicio_no_disponible',
     `${servicio.nombre} no se está ofreciendo en este momento.`);
 }
 const duracion = parseInt(txt(servicio.duracion_min), 10) || 30;
+// Cuántas personas caben en el MISMO espacio. `Servicios.cupo` vacío = 1, que es el
+// comportamiento de siempre: una cita ocupa el espacio y lo cierra. Con cupo > 1 el espacio
+// se cierra recién cuando se llena, que es lo que hace falta para una clase grupal.
+// Regla de modelado: un cupo > 1 solo tiene sentido si el `entrenador` habilitado es una
+// fila dedicada a esa clase (CLS-*). Si se le pusiera cupo a un servicio 1 a 1, el motor
+// dejaría reservar al mismo entrenador dos veces a la misma hora.
+const cupo = Math.max(1, parseInt(txt(servicio.cupo), 10) || 1);
 
-// ---------- 2. Profesionales elegibles ----------
-const habilitados = txt(servicio.profesionales_habilitados).split(';').map(txt).filter(Boolean);
-const equipo = profesionales.filter((p) => habilitados.includes(txt(p.id_profesional)) && esVerdadero(p.activo));
+// ---------- 2. Entrenadores elegibles ----------
+const habilitados = txt(servicio.entrenadores_habilitados).split(';').map(txt).filter(Boolean);
+const equipo = entrenadores.filter((p) => habilitados.includes(txt(p.id_entrenador)) && esVerdadero(p.activo));
 if (!equipo.length) {
-  return salir('servicio_no_disponible',
-    `Ahora mismo no hay un profesional disponible para ${servicio.nombre}.`);
+  // Las filas de categoría "Membresía" no tienen entrenadores a propósito: existen para que
+  // `catalogo_servicios` las pueda cotizar, no para agendarse. Sin este caso el motor decía
+  // "no hay un entrenador disponible para Membresía American Gym", que no es lo que pasa.
+  const esMembresia = norm(servicio.categoria).startsWith('membres')
+    || !txt(servicio.entrenadores_habilitados);
+  return salir('servicio_no_disponible', esMembresia
+    ? `${servicio.nombre} no es una cita: se adquiere en recepción o se la puede gestionar `
+      + 'una persona del equipo. Con gusto le paso con alguien.'
+    : `Ahora mismo no hay un entrenador disponible para ${servicio.nombre}.`);
 }
 
 // ---------- 3. Horarios ----------
-// Profesionales.horario admite "08:00-18:00" y "Mié:13:00-18:00;Sáb:08:00-13:00"
-function ventanaProfesional(horario, diaSemana) {
+// Entrenadores.horario admite "08:00-18:00" y "Mié:13:00-18:00;Sáb:08:00-13:00"
+function ventanaEntrenador(horario, diaSemana) {
   const h = txt(horario);
   if (h.includes(':') && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(h.split('-')[0] || '')) {
     for (const bloque of h.split(';')) {
@@ -80,7 +96,9 @@ function ventanaProfesional(horario, diaSemana) {
   return a !== null && b !== null ? [a, b] : null;
 }
 
-// Config.horario_atencion: "Lun-Vie 08:00-18:00, Sáb 08:00-13:00"
+// Config.horario_atencion: "Lun-Vie 05:00-22:00, Sáb 07:00-14:00, Dom 08:00-12:00".
+// Un día que no aparece es un día cerrado: así se decide también el domingo, que en Dulce
+// María estaba fijo como cerrado.
 function ventanaSede(diaSemana) {
   const partes = txt(sede.horario_atencion).split(',');
   for (const parte of partes) {
@@ -94,11 +112,11 @@ function ventanaSede(diaSemana) {
   return null;
 }
 
-// ---------- 4. Citas ocupadas, por profesional y día ----------
+// ---------- 4. Citas ocupadas, por entrenador y día ----------
 const ocupadas = {};
 for (const c of citas) {
-  if (!['Solicitada', 'Confirmada'].includes(txt(c.estado))) continue;
-  const clave = txt(c.id_profesional) + '|' + txt(c.fecha);
+  if (!ESTADOS_QUE_OCUPAN.includes(txt(c.estado))) continue;
+  const clave = txt(c.id_entrenador) + '|' + txt(c.fecha);
   const ini = aMin(c.hora_inicio); const fin = aMin(c.hora_fin);
   if (ini === null || fin === null) continue;
   (ocupadas[clave] = ocupadas[clave] || []).push([ini, fin]);
@@ -109,40 +127,40 @@ const ahora = DateTime.fromISO(pedido.ahora_iso, { zone: TZ });
 const minimo = ahora.plus({ hours: HORAS_DE_ANTICIPACION });
 const hoy = DateTime.fromISO(pedido.hoy, { zone: TZ });
 const pedidoDesde = DateTime.fromISO(pedido.desde, { zone: TZ });
-// Se barre siempre desde hoy, aunque el paciente haya pedido un día lejano: es lo que
+// Se barre siempre desde hoy, aunque el cliente haya pedido un día lejano: es lo que
 // permite ofrecer alternativas más cercanas sin una segunda llamada.
 const inicioBarrido = hoy;
 const finBarrido = pedidoDesde.plus({ days: DIAS_HORIZONTE });
 
-// `dur` y `team` se pasan por parámetro para poder calcular también la malla de la
-// valoración inicial con este MISMO generador. Duplicarlo en otro nodo sería dos fuentes
-// para el mismo cálculo, que es justo lo que este motor existe para evitar.
+// `dur` y `team` se pasan por parámetro para poder calcular también la malla de otro
+// servicio con este MISMO generador. Duplicarlo en otro nodo sería dos fuentes para el
+// mismo cálculo, que es justo lo que este motor existe para evitar.
 function slotsDelDia(dia, paso, dur = duracion, team = equipo) {
   const fecha = dia.toFormat('yyyy-MM-dd');
   const ds = dia.weekday;
   const salida = [];
-  if (ds === 7 || feriados.has(fecha)) return salida;            // domingos y feriados: cerrado
-  if (pedido.solo_entre_semana && ds === 6) return salida;
+  if (feriados.has(fecha)) return salida;                        // feriados: cerrado
+  if (pedido.solo_entre_semana && (ds === 6 || ds === 7)) return salida;
   const sedeV = ventanaSede(ds);
-  if (!sedeV) return salida;
+  if (!sedeV) return salida;                                     // la sede no abre ese día
   const limiteSede = sedeV[1] - MINUTOS_ANTES_DEL_CIERRE;
-  const topeLargo = ds === 6 ? TOPE_LARGO_SABADO : TOPE_LARGO_SEMANA;
 
   for (const p of team) {
     const dias = txt(p.dias_atencion).split(';').map((d) => norm(d).slice(0, 3));
     if (!dias.includes(ABREV[ds])) continue;
-    const propia = ventanaProfesional(p.horario, ds);
+    const propia = ventanaEntrenador(p.horario, ds);
     if (!propia) continue;
     const abre = Math.max(propia[0], sedeV[0]);
     const cierra = Math.min(propia[1], sedeV[1]);
     const limite = Math.min(cierra, limiteSede);
-    const choques = (ocupadas[txt(p.id_profesional) + '|' + fecha] || [])
-      .concat(URGENCIAS[txt(p.id_profesional)] ? URGENCIAS[txt(p.id_profesional)].map(([a, b]) => [aMin(a), aMin(b)]) : []);
+    const choques = ocupadas[txt(p.id_entrenador) + '|' + fecha] || [];
 
     for (let ini = abre; ini + dur <= limite; ini += paso) {
-      if (dur > DURACION_LARGA && ini > topeLargo) continue;
       const fin = ini + dur;
-      if (choques.some(([a, b]) => ini < b && fin > a)) continue;
+      // Se CUENTAN los solapes en vez de cortar con el primero: con cupo 1 es idéntico a
+      // `some`, y con cupo > 1 el espacio sigue vivo hasta llenarse.
+      const tomados = choques.filter(([a, b]) => ini < b && fin > a).length;
+      if (tomados >= cupo) continue;
       const arranque = dia.set({ hour: Math.floor(ini / 60), minute: ini % 60 });
       if (arranque < minimo) continue;
       salida.push({
@@ -151,17 +169,19 @@ function slotsDelDia(dia, paso, dur = duracion, team = equipo) {
         hora_inicio: aHora(ini),
         hora_fin: aHora(fin),
         minuto_inicio: ini,
-        id_profesional: txt(p.id_profesional),
-        profesional: txt(p.nombre),
+        id_entrenador: txt(p.id_entrenador),
+        entrenador: txt(p.nombre),
+        cupo,
+        cupos_libres: cupo - tomados,
       });
     }
   }
   return salida;
 }
 
-// Malla anclada a la duración del servicio: una limpieza de 45 min da 08:00, 08:45,
-// 09:30... y una valoración de 30 da 08:00, 08:30... La agenda se ve distinta según
-// el servicio, que es como funciona una clínica de verdad.
+// Malla anclada a la duración del servicio: una sesión de 45 min da 06:00, 06:45,
+// 07:30... y una evaluación de 30 da 06:00, 06:30... La agenda se ve distinta según
+// el servicio, que es como funciona una agenda de verdad.
 let slots = [];
 for (let d = inicioBarrido; d <= finBarrido; d = d.plus({ days: 1 })) {
   slots = slots.concat(slotsDelDia(d, duracion));
@@ -181,26 +201,26 @@ if (pedido.dia_especifico) {
 
 slots.sort((a, b) => (a.fecha === b.fecha ? a.minuto_inicio - b.minuto_inicio : a.fecha < b.fecha ? -1 : 1));
 
-// Lo que el paciente pidió, contra todo lo que existe. Cuando pidió un día concreto,
+// Lo que el cliente pidió, contra todo lo que existe. Cuando pidió un día concreto,
 // "en rango" es ese día; cuando pidió un rango ("la próxima semana", "después del 15"),
 // es ese rango. `slots` completo queda igual para poder ofrecer alternativas.
 const enRango = slots.filter((s) => s.fecha >= pedido.desde && s.fecha <= pedido.hasta);
 
 // ¿Por qué no hay nada el día que pidió? El motivo tiene que ser el REAL: decir que el
-// profesional no atiende sábados cuando el problema es que ese sábado es feriado es
-// mentirle al paciente.
+// entrenador no atiende sábados cuando el problema es que ese sábado es feriado es
+// mentirle al cliente.
 let motivoDia = null;
 if (pedido.dia_especifico && !slots.some((s) => s.fecha === pedido.desde)) {
   const dia = DateTime.fromISO(pedido.desde, { zone: TZ });
   const atiendeEseDia = equipo.some((p) => txt(p.dias_atencion).split(';')
     .map((d) => norm(d).slice(0, 3)).includes(ABREV[dia.weekday]));
   if (feriados.has(pedido.desde)) motivoDia = 'feriado';
-  else if (dia.weekday === 7) motivoDia = 'domingo';
+  else if (!ventanaSede(dia.weekday)) motivoDia = 'cerrado';
   else if (!atiendeEseDia) motivoDia = 'dia_no_habilitado';
   else motivoDia = 'dia_lleno';
 }
 
-// ---------- 6. La salida de emergencia del paciente nuevo ----------
+// ---------- 6. La salida de emergencia del cliente nuevo (solo con REGLAS_POR_TIPO) ----------
 // Si el servicio pedido NO es la valoración, se calcula TAMBIÉN su malla. Cuesta solo CPU
 // sobre datos que ya se leyeron —ni una llamada más a Sheets— y le permite a "Validar
 // reglas" ofrecer horarios concretos en la misma respuesta en vez de devolver
@@ -208,12 +228,12 @@ if (pedido.dia_especifico && !slots.some((s) => s.fecha === pedido.desde)) {
 // depende de que el modelo haga algo es un contrato roto.
 const SRV_VALORACION = 'SRV-001';
 let slotsValoracion = [];
-if (txt(servicio.id_servicio) !== SRV_VALORACION) {
+if (REGLAS_POR_TIPO && txt(servicio.id_servicio) !== SRV_VALORACION) {
   const sv = servicios.find((s) => txt(s.id_servicio) === SRV_VALORACION);
   if (sv && esVerdadero(sv.activo)) {
     const durV = parseInt(txt(sv.duracion_min), 10) || 30;
-    const habV = txt(sv.profesionales_habilitados).split(';').map(txt).filter(Boolean);
-    const equipoV = profesionales.filter((p) => habV.includes(txt(p.id_profesional)) && esVerdadero(p.activo));
+    const habV = txt(sv.entrenadores_habilitados).split(';').map(txt).filter(Boolean);
+    const equipoV = entrenadores.filter((p) => habV.includes(txt(p.id_entrenador)) && esVerdadero(p.activo));
     if (equipoV.length) {
       for (let d = inicioBarrido; d <= finBarrido; d = d.plus({ days: 1 })) {
         slotsValoracion = slotsValoracion.concat(slotsDelDia(d, durV, durV, equipoV));
@@ -234,8 +254,14 @@ return [{
     id_servicio: txt(servicio.id_servicio),
     servicio: txt(servicio.nombre),
     duracion_min: duracion,
-    requiere_valoracion: esVerdadero(servicio.requiere_valoracion),
-    equipo: equipo.map((p) => ({ id: txt(p.id_profesional), nombre: txt(p.nombre), dias: txt(p.dias_atencion) })),
+    cupo,
+    // Una clase grupal se anuncia distinto que una cita 1 a 1 ("quedan 4 campos" vs "a las
+    // 6:00 con Norman"). El motor lo dice; el modelo no lo deduce del nombre del servicio.
+    es_clase_grupal: cupo > 1,
+    // La columna `requiere_valoracion` no existe en el Sheet del gimnasio: sin REGLAS_POR_TIPO
+    // esto es siempre false.
+    requiere_valoracion: REGLAS_POR_TIPO && esVerdadero(servicio.requiere_valoracion),
+    equipo: equipo.map((p) => ({ id: txt(p.id_entrenador), nombre: txt(p.nombre), dias: txt(p.dias_atencion) })),
     hubo_rescate: huboRescate,
     total_slots: slots.length,
     total_en_rango: enRango.length,

@@ -41,6 +41,10 @@ return [{
     id_paciente: d.id_paciente,
     nombre_completo: d.nombre_paciente,
     telefono: d.telefono,
+    // Pacientes!D. `email_paciente` ya viene resuelto (el que dictó ahora, o el que ya
+    // estaba en la hoja), así que para un paciente que no dio correo esto reescribe el
+    // mismo valor y nunca lo borra.
+    email: d.email_paciente || p.email || '',
     sede_preferida: p.sede_preferida || 'SEDE-01',
     estado: p.estado || 'Nuevo',
     fecha_registro: p.fecha_registro || d.fecha_creacion.slice(0, 10),
@@ -83,6 +87,16 @@ return [{
 
 // --- respuesta-agendada ---
 const d = $('Confirmar y preparar').first().json;
+const loc = $('Localizar cita').first().json;
+
+// Las citas que YA tenía ANTES de esta (el contexto se calculó al entrar, antes de
+// escribir). Se le recuerdan al confirmar para que no se le junten dos sin darse cuenta.
+const previas = loc.citas_proximas || [];
+const recordatorio = previas.length
+  ? ` Además de esta, ya tenía ${previas.length === 1 ? 'una cita' : `${previas.length} citas`}: `
+    + `${previas.map((c) => `${c.servicio}, ${c.texto}`).join('; ')}.`
+  : '';
+
 return [{
   json: {
     ok: true,
@@ -103,7 +117,29 @@ return [{
     },
     alternativas: [],
     mensaje: `Cita solicitada para ${d.slot_texto}. Queda registrada como SOLICITADA: `
-      + 'la clínica la confirma por WhatsApp 24 horas antes.',
+      + `la clínica la confirma por WhatsApp 24 horas antes.${recordatorio}`,
+    paciente_existente: loc.paciente_existente === true,
+    valoracion: loc.valoracion || { estado: 'ninguna', texto: '' },
+    citas_proximas: previas,
+    aviso: recordatorio.trim(),
+    // Payload para "Enviar correo de la cita". Si el paciente no dio correo, `email` va
+    // vacío y el sub-workflow corta solo: la cita ya quedó escrita igual.
+    correo: {
+      tipo: 'nueva',
+      email: d.email_paciente || '',
+      nombre_paciente: d.nombre_paciente,
+      servicio: d.servicio,
+      texto_cita: d.slot_texto,
+      profesional: d.slot.profesional,
+      id_cita: d.id_cita,
+      nota: '',
+      texto_anterior: '',
+      sede_nombre: (d.sede || {}).nombre || '',
+      sede_direccion: (d.sede || {}).direccion || '',
+      sede_link_maps: (d.sede || {}).link_maps || '',
+      sede_telefono: (d.sede || {}).telefono || '',
+      sede_whatsapp: (d.sede || {}).whatsapp || '',
+    },
   },
 }];
 
@@ -131,11 +167,23 @@ return [{
     agendada: j.agendada === true,
     motivo: j.motivo || null,
     // cuando la regla de valoración previa bloquea, el agente tiene que volver a
-    // consultar disponibilidad con ESTE servicio
+    // consultar disponibilidad con ESTE servicio. Va en null cuando el paciente YA tiene
+    // la valoración agendada: ahí no hay nada que consultar, solo que llegue el día.
     id_servicio_sugerido: j.id_servicio_sugerido || null,
     id_cita: j.id_cita || null,
     cita: j.cita || null,
     alternativas,
     mensaje: j.mensaje || 'No pude resolver la consulta de agenda.',
+    // Contexto del paciente. Este nodo es un whitelist: lo que no se nombre acá, no sale.
+    // `paciente_existente` y `valoracion` son HECHOS que el modelo no puede deducir de
+    // `catalogo_servicios` —esa hoja habla del servicio, no de la persona— y `aviso` es
+    // la explicación ya redactada de por qué se puede o no agendar.
+    paciente_existente: j.paciente_existente === true,
+    valoracion: j.valoracion || { estado: 'ninguna', texto: '' },
+    citas_proximas: Array.isArray(j.citas_proximas) ? j.citas_proximas : [],
+    aviso: j.aviso || '',
+    // `aviso` es lo que hay que decir sin que lo pidan; `nota_valoracion` es lo que hay
+    // que decir cuando el paciente pregunta por la regla. Va siempre poblado.
+    nota_valoracion: j.nota_valoracion || '',
   },
 }];

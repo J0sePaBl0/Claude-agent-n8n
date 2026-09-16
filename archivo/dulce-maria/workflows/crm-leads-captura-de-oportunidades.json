@@ -1,0 +1,1502 @@
+{
+  "id": "W8A2NHCABxlNWCph",
+  "name": "CRM Leads — Captura de oportunidades (WhatsApp)",
+  "active": true,
+  "updatedAt": "2026-09-02T21:59:19.202Z",
+  "activeVersionId": "4827816b-5904-4ce5-bfa0-a217d4efecff",
+  "tags": [],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Costa_Rica",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "binaryMode": "separate"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "nombre_lead"
+            },
+            {
+              "name": "mensaje_texto"
+            },
+            {
+              "name": "fecha_evento"
+            }
+          ]
+        }
+      },
+      "id": "crm-lead-0001",
+      "name": "Entrada — Datos del lead",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Pacientes",
+          "cachedResultName": "Pacientes"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "telefono",
+              "lookupValue": "={{ $json.telefono }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "crm-lead-0002",
+      "name": "CRM - Buscar paciente por teléfono",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -448,
+        304
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-es-paciente",
+              "leftValue": "={{ $json.id_paciente || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0003",
+      "name": "CRM - ¿Ya es paciente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "crm-lead-0004",
+      "name": "CRM - Omitir (ya es paciente)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Oportunidades",
+          "cachedResultName": "Oportunidades"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "telefono",
+              "lookupValue": "={{ $('CRM - Normalizar teléfono').first().json.telefono }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "id": "crm-lead-0005",
+      "name": "CRM - Buscar oportunidades por teléfono",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        448
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide si este teléfono ya tiene una oportunidad ABIERTA (etapa distinta de Ganada/Perdida)\n// y, si la tiene, si sigue viva o ya está dormida.\n// Los filtros de Google Sheets solo soportan igualdad exacta, por eso el descarte de\n// Ganada/Perdida se resuelve acá y no en el filtro del nodo anterior.\nconst DIAS_DORMANCIA = 60;\n\nconst lead = $('CRM - Normalizar teléfono').first().json;\n\n// alwaysOutputData puede meter un item vacío {} cuando no hubo match: se descarta.\nconst filas = $input.all().map(i => i.json).filter(r => r && r.id_oportunidad);\nconst cerradas = ['Ganada', 'Perdida'];\nconst abiertas = filas.filter(r => r.etapa && !cerradas.includes(String(r.etapa).trim()));\n\n// Días desde la última señal de vida. fecha_ultima_interaccion es la fuente real;\n// fecha_creacion es el fallback para las filas creadas antes de que esa columna existiera.\n// Si ninguna se puede parsear se devuelve null y NUNCA se asume dormancia: es preferible\n// arrastrar una oportunidad vieja que cerrar una que sigue viva.\nconst diasSinActividad = (fila) => {\n  const ref = String(fila.fecha_ultima_interaccion || fila.fecha_creacion || '').trim();\n  const t = Date.parse(ref.replace(' ', 'T'));\n  if (!Number.isFinite(t)) return null;\n  return (Date.now() - t) / 86400000;\n};\n\nconst nuevo = {\n  modo: 'evaluar_nuevo',\n  id_oportunidad: '',\n  id_oportunidad_dormida: '',\n  dias_sin_actividad: '',\n  id_paciente: '',\n  nombre_lead: lead.nombre_lead || '',\n  telefono: lead.telefono || '',\n  fecha_creacion: lead.fecha_evento || '',\n  canal_origen: 'WhatsApp',\n  servicio_interes_actual: '',\n  etapa: 'Nuevo',\n  valor_estimado: '',\n  asignado_a: 'Bot',\n  fecha_seguimiento: '',\n  motivo_perdida: '',\n  notas_actuales: '',\n  mensaje_texto: lead.mensaje_texto || '',\n  fecha_evento: lead.fecha_evento || '',\n};\n\nif (abiertas.length > 0) {\n  const a = abiertas[abiertas.length - 1]; // la más reciente de ese teléfono\n  const dias = diasSinActividad(a);\n\n  // Dormida: se cierra como Perdida y este mensaje arranca un ciclo de venta nuevo.\n  if (dias !== null && dias > DIAS_DORMANCIA) {\n    return [{ json: {\n      ...nuevo,\n      id_oportunidad_dormida: a.id_oportunidad,\n      dias_sin_actividad: Math.round(dias),\n    }}];\n  }\n\n  return [{ json: {\n    modo: 'actualizar',\n    id_oportunidad: a.id_oportunidad,\n    id_oportunidad_dormida: '',\n    dias_sin_actividad: dias === null ? '' : Math.round(dias),\n    id_paciente: a.id_paciente || '',\n    nombre_lead: a.nombre_lead || lead.nombre_lead || '',\n    telefono: a.telefono || lead.telefono || '',\n    fecha_creacion: a.fecha_creacion || '',\n    canal_origen: a.canal_origen || 'WhatsApp',\n    servicio_interes_actual: a.servicio_interes || '',\n    etapa: a.etapa,\n    valor_estimado: a.valor_estimado === 0 ? 0 : (a.valor_estimado || ''),\n    asignado_a: a.asignado_a || 'Bot',\n    fecha_seguimiento: a.fecha_seguimiento || '',\n    motivo_perdida: a.motivo_perdida || '',\n    notas_actuales: a.notas || '',\n    mensaje_texto: lead.mensaje_texto || '',\n    fecha_evento: lead.fecha_evento || '',\n  }}];\n}\n\n// Teléfono sin oportunidad abierta: hay que EVALUAR si el mensaje amerita crear un lead.\nreturn [{ json: nuevo }];"
+      },
+      "id": "crm-lead-0006",
+      "name": "CRM - Detectar oportunidad abierta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-hay-dormida",
+              "leftValue": "={{ $json.id_oportunidad_dormida || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0020",
+      "name": "CRM - ¿Hay oportunidad dormida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Oportunidades",
+          "cachedResultName": "Oportunidades"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id_oportunidad"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "value": {
+            "id_oportunidad": "={{ $json.id_oportunidad_dormida }}",
+            "etapa": "Perdida",
+            "motivo_perdida": "={{ 'Cierre automático: sin actividad por ' + $json.dias_sin_actividad + ' días' }}"
+          },
+          "schema": [
+            {
+              "id": "id_oportunidad",
+              "displayName": "id_oportunidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_paciente",
+              "displayName": "id_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre_lead",
+              "displayName": "nombre_lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_creacion",
+              "displayName": "fecha_creacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "canal_origen",
+              "displayName": "canal_origen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "servicio_interes",
+              "displayName": "servicio_interes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "etapa",
+              "displayName": "etapa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "valor_estimado",
+              "displayName": "valor_estimado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "intencion",
+              "displayName": "intencion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sentimiento",
+              "displayName": "sentimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "requiere_humano",
+              "displayName": "requiere_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "asignado_a",
+              "displayName": "asignado_a",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_seguimiento",
+              "displayName": "fecha_seguimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "motivo_perdida",
+              "displayName": "motivo_perdida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notas",
+              "displayName": "notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_ultima_interaccion",
+              "displayName": "fecha_ultima_interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "crm-lead-0021",
+      "name": "CRM - Cerrar oportunidad dormida",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        288
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Servicios",
+          "cachedResultName": "Servicios"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0007",
+      "name": "CRM - Leer catálogo de servicios",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        560
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Arma el catálogo de servicios que se le pasa a la IA como contexto, y la lista blanca\n// de id_servicio contra la que se valida después su respuesta.\nconst catalogo = $input.all().map(i => i.json).filter(r => r && r.id_servicio);\n\nconst esActivo = (v) => v === true || String(v).trim().toUpperCase() === 'TRUE';\nconst activos = catalogo.filter(s => esActivo(s.activo));\nconst usar = activos.length ? activos : catalogo; // si la columna 'activo' viniera vacía, no dejamos a la IA sin catálogo\n\nconst catalogo_servicios = usar.map(s => `${s.id_servicio}: ${s.nombre}`).join('\\n');\nconst ids_validos = usar.map(s => String(s.id_servicio).trim());\n\nconst prev = $('CRM - Detectar oportunidad abierta').first().json;\nreturn [{ json: { ...prev, catalogo_servicios, ids_validos } }];"
+      },
+      "id": "crm-lead-0008",
+      "name": "CRM - Adjuntar catálogo de servicios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.6-luna",
+          "mode": "list",
+          "cachedResultName": "gpt-5.6-luna"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "crm-lead-0009",
+      "name": "CRM IA - Modelo clasificación",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        784
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "8n0JOv3z7MfZzuM4",
+          "name": "trignia agentes"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=Mensaje recibido por WhatsApp de un contacto de la clínica dental:\n\"{{ $json.mensaje_texto }}\"\n\nCatálogo de servicios disponibles (formato \"id_servicio: nombre\"):\n{{ $json.catalogo_servicios }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"es_lead\": {\n      \"type\": \"boolean\",\n      \"description\": \"true si el mensaje muestra interés comercial real: pregunta por un servicio o su precio, quiere agendar/reagendar una cita, reporta dolor o una urgencia dental, o pide una valoración. false si es una consulta genérica sin valor de venta: solo pregunta la dirección o el horario, saluda, agradece, es un número equivocado, spam, o un mensaje que no tiene nada que ver con la clínica.\"\n    },\n    \"intencion\": {\n      \"type\": \"string\",\n      \"enum\": [\"Info precio\", \"Agendar\", \"Urgencia dolor\", \"Reprogramar\", \"Reclamo\"],\n      \"description\": \"Intención principal del mensaje. Si es_lead es false, escoge la más cercana igual.\"\n    },\n    \"sentimiento\": {\n      \"type\": \"string\",\n      \"enum\": [\"Positivo\", \"Neutro\", \"Negativo\"],\n      \"description\": \"Tono emocional del mensaje.\"\n    },\n    \"urgencia\": {\n      \"type\": \"string\",\n      \"enum\": [\"Alta\", \"Media\", \"Baja\"],\n      \"description\": \"Qué tan rápido necesita atención. Alta si hay dolor, sangrado o algo que no puede esperar.\"\n    },\n    \"servicio_interes\": {\n      \"type\": \"string\",\n      \"description\": \"El id_servicio EXACTO del catálogo (formato SRV-XXX) que mejor coincide con lo que pide. Cadena vacía si ninguno aplica claramente. Nunca inventes un id que no esté en el catálogo.\"\n    }\n  },\n  \"required\": [\"es_lead\", \"intencion\", \"sentimiento\", \"urgencia\", \"servicio_interes\"]\n}",
+        "options": {
+          "systemPromptTemplate": "Sos un clasificador de leads para el CRM de una clínica dental. Recibís UN mensaje de WhatsApp y devolvés únicamente los campos del esquema, sin texto adicional.\n\nReglas:\n- Respetá EXACTAMENTE los valores permitidos de cada enum. Nunca inventes valores nuevos.\n- En `servicio_interes` usá solo un id_servicio que aparezca literalmente en el catálogo que te paso. Si dudás, devolvé cadena vacía.\n- Ante ambigüedad en `es_lead`, preferí `true`: es peor perder un lead real que registrar uno de más.\n- Pero si el mensaje es claramente solo logístico (dirección, horario, \"gracias\", \"buenos días\") o no tiene relación con la clínica, devolvé `es_lead: false`.\n- Usá `intencion: \"Reclamo\"` SOLO cuando el mensaje sea una queja o inconformidad real con un servicio ya recibido. Un reclamo no es una venta y se enruta aparte.\n- En `sentimiento` y `urgencia`, si no hay señal clara, usá los valores conservadores (Neutro / Media)."
+        }
+      },
+      "id": "crm-lead-0010",
+      "name": "CRM IA - Clasificar mensaje",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1088,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nunca se reenvía la salida cruda del LLM al CRM: acá se valida contra los enums reales\n// del Sheet y contra el catálogo de servicios, con fallbacks conservadores.\nconst raw = $input.first().json;\nconst ia = (raw && typeof raw.output === 'object' && raw.output !== null) ? raw.output : (raw || {});\nconst prev = $('CRM - Adjuntar catálogo de servicios').first().json;\n\nconst pick = (v, permitidos, fallback) => permitidos.includes(v) ? v : fallback;\nconst aBool = (v) => v === true || String(v).trim().toLowerCase() === 'true';\n\nconst intencion   = pick(ia.intencion,   ['Info precio', 'Agendar', 'Urgencia dolor', 'Reprogramar', 'Reclamo'], 'Info precio');\nconst sentimiento = pick(ia.sentimiento, ['Positivo', 'Neutro', 'Negativo'], 'Neutro');\nconst urgencia    = pick(ia.urgencia,    ['Alta', 'Media', 'Baja'], 'Media');\n\n// Un reclamo es un caso de servicio, no una venta: no abre ni mueve oportunidades.\n// OJO: el escalamiento a una persona NO se decide acá. Lo resuelve el workflow principal\n// (¿Requiere Escalamiento? → aviso por correo). Por eso este flujo ya no clasifica ni\n// escribe requiere_humano: dos LLM distintos decidiendo lo mismo terminan contradiciéndose.\nconst es_reclamo = intencion === 'Reclamo';\n\n// servicio_interes debe existir en el catálogo real; si no, se descarta y se deja rastro en notas.\nconst ids = Array.isArray(prev.ids_validos) ? prev.ids_validos : [];\nconst servicio_ia = ia.servicio_interes ? String(ia.servicio_interes).trim() : '';\nconst servicio_valido = ids.includes(servicio_ia) ? servicio_ia : '';\nconst nota_servicio = (servicio_ia && !servicio_valido) ? `[IA sugirió \"${servicio_ia}\", sin match en catálogo] ` : '';\n\n// Si ya existe una oportunidad abierta para este teléfono, ya se decidió antes que es un lead:\n// no se le vuelve a preguntar a la IA en cada mensaje de la conversación.\nconst es_nuevo = prev.modo === 'evaluar_nuevo';\nconst es_lead = es_nuevo ? aBool(ia.es_lead) : true;\n\nconst notas = es_nuevo\n  ? `${nota_servicio}Lead generado automáticamente desde WhatsApp. Primer mensaje: \"${prev.mensaje_texto}\"`\n  : `${prev.notas_actuales ? prev.notas_actuales + '\\n' : ''}[${prev.fecha_evento}] ${nota_servicio}${prev.mensaje_texto}`;\n\nreturn [{ json: {\n  es_lead,\n  es_reclamo,\n  modo: prev.modo,\n  id_oportunidad: prev.id_oportunidad || '',\n  id_paciente: prev.id_paciente || '',\n  nombre_lead: prev.nombre_lead || '',\n  telefono: prev.telefono || '',\n  fecha_creacion: prev.fecha_creacion || prev.fecha_evento || '',\n  canal_origen: prev.canal_origen || 'WhatsApp',\n  servicio_interes: servicio_valido || prev.servicio_interes_actual || '',\n  etapa: prev.etapa || 'Nuevo',\n  valor_estimado: prev.valor_estimado === 0 ? 0 : (prev.valor_estimado || ''),\n  intencion,\n  sentimiento,\n  urgencia,\n  asignado_a: prev.asignado_a || 'Bot',\n  fecha_seguimiento: prev.fecha_seguimiento || '',\n  motivo_perdida: prev.motivo_perdida || '',\n  notas,\n  // Marca de última actividad: es lo que alimenta la regla de dormancia en la próxima corrida.\n  fecha_ultima_interaccion: prev.fecha_evento || '',\n  // Se arrastran para la fila de Interacciones que se escribe al final del flujo.\n  mensaje_texto: prev.mensaje_texto || '',\n  fecha_evento: prev.fecha_evento || '',\n}}];"
+      },
+      "id": "crm-lead-0011",
+      "name": "CRM - Validar salida de IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-es-reclamo",
+              "leftValue": "={{ $json.es_reclamo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0022",
+      "name": "CRM - ¿Es reclamo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1552,
+        560
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "crm-lead-0023",
+      "name": "CRM - Reclamo (sin oportunidad)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-es-lead",
+              "leftValue": "={{ $json.es_lead }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0012",
+      "name": "CRM - ¿Es lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1760,
+        688
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "crm-lead-0013",
+      "name": "CRM - No es lead, no se registra",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-es-nuevo",
+              "leftValue": "={{ $json.modo }}",
+              "rightValue": "evaluar_nuevo",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0014",
+      "name": "CRM - ¿Es lead nuevo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1968,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Oportunidades",
+          "cachedResultName": "Oportunidades"
+        },
+        "options": {}
+      },
+      "id": "crm-lead-0015",
+      "name": "CRM - Leer todas las oportunidades (para ID)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2176,
+        720
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Siguiente correlativo OPP-XXXX = max existente + 1.\n// Limitación conocida y aceptada para este alcance de demo: si dos leads nuevos entraran\n// de forma concurrente podrían leer el mismo máximo y colisionar.\nconst filas = $input.all().map(i => i.json).filter(r => r && r.id_oportunidad);\nconst nums = filas\n  .map(r => parseInt(String(r.id_oportunidad).replace(/^OPP-/i, ''), 10))\n  .filter(n => Number.isFinite(n));\nconst siguiente = (nums.length ? Math.max(...nums) : 0) + 1;\n\nconst prev = $('CRM - Validar salida de IA').first().json;\nreturn [{ json: { ...prev, id_oportunidad: 'OPP-' + String(siguiente).padStart(4, '0') } }];"
+      },
+      "id": "crm-lead-0016",
+      "name": "CRM - Generar id_oportunidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Oportunidades",
+          "cachedResultName": "Oportunidades"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id_oportunidad"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "value": {
+            "id_oportunidad": "={{ $json.id_oportunidad }}",
+            "id_paciente": "={{ $json.id_paciente }}",
+            "nombre_lead": "={{ $json.nombre_lead }}",
+            "telefono": "={{ $json.telefono }}",
+            "fecha_creacion": "={{ $json.fecha_creacion }}",
+            "canal_origen": "={{ $json.canal_origen }}",
+            "servicio_interes": "={{ $json.servicio_interes }}",
+            "etapa": "={{ $json.etapa }}",
+            "valor_estimado": "={{ $json.valor_estimado }}",
+            "intencion": "={{ $json.intencion }}",
+            "sentimiento": "={{ $json.sentimiento }}",
+            "urgencia": "={{ $json.urgencia }}",
+            "asignado_a": "={{ $json.asignado_a }}",
+            "fecha_seguimiento": "={{ $json.fecha_seguimiento }}",
+            "motivo_perdida": "={{ $json.motivo_perdida }}",
+            "notas": "={{ $json.notas }}",
+            "fecha_ultima_interaccion": "={{ $json.fecha_ultima_interaccion }}"
+          },
+          "schema": [
+            {
+              "id": "id_oportunidad",
+              "displayName": "id_oportunidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_paciente",
+              "displayName": "id_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre_lead",
+              "displayName": "nombre_lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_creacion",
+              "displayName": "fecha_creacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "canal_origen",
+              "displayName": "canal_origen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "servicio_interes",
+              "displayName": "servicio_interes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "etapa",
+              "displayName": "etapa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "valor_estimado",
+              "displayName": "valor_estimado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "intencion",
+              "displayName": "intencion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sentimiento",
+              "displayName": "sentimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "requiere_humano",
+              "displayName": "requiere_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "asignado_a",
+              "displayName": "asignado_a",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_seguimiento",
+              "displayName": "fecha_seguimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "motivo_perdida",
+              "displayName": "motivo_perdida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notas",
+              "displayName": "notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_ultima_interaccion",
+              "displayName": "fecha_ultima_interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "crm-lead-0017",
+      "name": "CRM - Guardar oportunidad en CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2592,
+        816
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Punto único de convergencia: acá llegan las tres salidas posibles del flujo\n// (oportunidad guardada, mensaje descartado, reclamo) para dejar UNA fila en Interacciones.\n// Esta pestaña es la que conserva el historial de intenciones: la fila de Oportunidades\n// solo guarda el estado ACTUAL y sobrescribe intencion/sentimiento/urgencia en cada mensaje.\nconst base = $('CRM - Validar salida de IA').first().json;\n\n// El id definitivo solo existe si esta corrida generó una oportunidad nueva.\nlet id_oportunidad = base.id_oportunidad || '';\ntry {\n  const gen = $('CRM - Generar id_oportunidad').first().json;\n  if (gen && gen.id_oportunidad) id_oportunidad = gen.id_oportunidad;\n} catch (e) {\n  // El nodo no corrió en esta rama: es un reclamo, un no-lead, o una oportunidad ya existente.\n}\n\nlet accion;\nif (base.es_reclamo) accion = 'reclamo';\nelse if (!base.es_lead) accion = 'descartado_no_lead';\nelse if (base.modo === 'evaluar_nuevo') accion = 'oportunidad_creada';\nelse accion = 'oportunidad_actualizada';\n\n// id_interaccion sin leer la hoja: timestamp + sufijo aleatorio. Evita la lectura extra y\n// la condición de carrera que sí arrastra el correlativo OPP-XXXX.\nconst stamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);\nconst sufijo = Math.random().toString(36).slice(2, 6).toUpperCase();\n\nreturn [{ json: {\n  id_interaccion: `INT-${stamp}-${sufijo}`,\n  id_oportunidad,\n  telefono: base.telefono || '',\n  fecha: base.fecha_evento || '',\n  canal: base.canal_origen || 'WhatsApp',\n  mensaje: base.mensaje_texto || '',\n  intencion: base.intencion || '',\n  sentimiento: base.sentimiento || '',\n  urgencia: base.urgencia || '',\n  accion,\n}}];"
+      },
+      "id": "crm-lead-0024",
+      "name": "CRM - Preparar interacción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Interacciones",
+          "cachedResultName": "Interacciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "value": {
+            "id_interaccion": "={{ $json.id_interaccion }}",
+            "id_oportunidad": "={{ $json.id_oportunidad }}",
+            "telefono": "={{ $json.telefono }}",
+            "fecha": "={{ $json.fecha }}",
+            "canal": "={{ $json.canal }}",
+            "mensaje": "={{ $json.mensaje }}",
+            "intencion": "={{ $json.intencion }}",
+            "sentimiento": "={{ $json.sentimiento }}",
+            "urgencia": "={{ $json.urgencia }}",
+            "accion": "={{ $json.accion }}"
+          },
+          "schema": [
+            {
+              "id": "id_interaccion",
+              "displayName": "id_interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_oportunidad",
+              "displayName": "id_oportunidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "intencion",
+              "displayName": "intencion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sentimiento",
+              "displayName": "sentimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "requiere_humano",
+              "displayName": "requiere_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "crm-lead-0025",
+      "name": "CRM - Registrar interacción",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3024,
+        640
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## CRM Leads — Captura de oportunidades (WhatsApp)\n\n**Quién lo dispara:** el workflow `Demo - Conversión y Agenda` mediante el nodo `CRM - Enviar a captura de leads` (Execute Sub-workflow con **Wait for Sub-Workflow Completion apagado**), colocado **en serie justo después del `If` y antes de `Consultar Estado Conversación`**. Como no espera al sub-workflow, devuelve al instante y **no retrasa el mensaje que se le manda al paciente**.\n\nEstá en serie y no en paralelo a propósito: cuando dos ramas salen del mismo nodo y la otra falla (por ejemplo, la API de Chatwoot devuelve 404), n8n cancela la rama que aún no había corrido y el lead se perdería. En serie y de primero, la captura ocurre siempre. Además tiene `onError: continueRegularOutput`, así que si el CRM falla la conversación sigue normal.\n\nSe conecta antes del filtro `¿Bot Puede Responder?` a propósito: el lead se registra también cuando la conversación ya la tomó un humano (`pending`), que es justo cuando más importa.\n\n---\n\n### Modelo de datos (3 niveles)\n\nEs el modelo estándar de CRM: **una persona, N oportunidades a lo largo del tiempo, N interacciones por oportunidad.**\n\n| Pestaña | Cuántas filas | Regla |\n|---|---|---|\n| `Pacientes` | 1 por persona | Si el teléfono está acá, el flujo no hace nada más |\n| `Oportunidades` | 1 por **ciclo de venta** | Una abierta a la vez por teléfono. Guarda el estado ACTUAL |\n| `Interacciones` | 1 por **mensaje clasificado** | Historial completo |\n\n**Una oportunidad = una decisión de compra**, no un mensaje y no una intención. `intencion`, `sentimiento` y `urgencia` en `Oportunidades` se **sobrescriben** en cada mensaje a propósito: representan el estado actual del lead. El historial vive en `Interacciones`.\n\n---\n\n### Los 6 caminos posibles\n\n1. El teléfono ya existe en `Pacientes` → **no hace nada** (ni interacción).\n2. Hay una oportunidad abierta y **activa** (≤ 60 días) → la **actualiza** + interacción `oportunidad_actualizada`.\n3. Hay una oportunidad abierta pero **dormida** (> 60 días) → la cierra como `Perdida` y trata el mensaje como ciclo nuevo.\n4. Sin oportunidad abierta + la IA detecta intención comercial → crea `OPP-XXXX` + interacción `oportunidad_creada`.\n5. Sin oportunidad abierta + mensaje solo logístico → **no crea oportunidad**, pero sí deja interacción `descartado_no_lead`.\n6. `intencion = Reclamo` → **nunca** crea ni mueve una oportunidad. Solo interacción `reclamo`.\n\n**Credenciales requeridas:** Google Sheets OAuth2 (misma cuenta de Google que la credencial de Drive) + `OpenAi account`.\n\n---\n\n### Gotchas\n\n- **`requiere_humano` NO se maneja acá.** El escalamiento a una persona lo decide únicamente el workflow principal (`¿Requiere Escalamiento?` → aviso por correo). Este flujo dejó de clasificarlo y de escribirlo a propósito: dos llamadas distintas al LLM decidiendo lo mismo sobre el mismo mensaje terminan contradiciéndose. Las columnas `requiere_humano` siguen existiendo en ambas pestañas (marcadas `removed: true` en el schema de los nodos) y quedan vacías en las filas nuevas. **No borres esas columnas del Sheet sin actualizar también el `columns.schema` de los dos nodos**, o vuelve el error `Column names were updated after the node's setup`.\n- **Encabezados sin espacios.** Ese mismo error sale si un encabezado tiene un espacio al final (`\"telefono \"` ≠ `\"telefono\"`). El nodo compara la fila 1 real contra el `columns.schema` que guarda adentro.\n- **Columnas obligatorias:** `Oportunidades` necesita `fecha_ultima_interaccion` (columna R) y la pestaña `Interacciones` con sus 11 encabezados.\n- **Dormancia = 60 días** (constante `DIAS_DORMANCIA` en `CRM - Detectar oportunidad abierta`). Si la fecha no se puede parsear **nunca** se asume dormancia: es preferible arrastrar una oportunidad vieja que cerrar una viva.\n- **El cierre por dormancia ocurre antes de la IA**, así que una oportunidad zombi se cierra aunque el mensaje que la despertó no sea un lead. Es deliberado: llevaba 60+ días muerta.\n- **`Reclamo` sale del pipeline de ventas** porque es un caso de servicio, no un deal. Consecuencia aceptada: si alguien con oportunidad abierta se queja, esa queja no actualiza la oportunidad — queda solo en `Interacciones`.\n- **`CRM - Registrar interacción` tiene `onError: continueRegularOutput`**: si la pestaña no existe o Sheets falla, la oportunidad ya se guardó y no se pierde el lead. El log de interacciones es best-effort a propósito.\n- Los filtros de Google Sheets **solo soportan igualdad exacta** — el descarte de etapas Ganada/Perdida se hace en Code, no en el filtro.\n- Las lecturas de búsqueda tienen **`Always Output Data` activado**: sin eso, \"sin resultados\" = 0 items = las ramas siguientes nunca corren.\n- La salida del LLM **nunca** se escribe directo: `CRM - Validar salida de IA` la filtra contra los enums reales y contra el catálogo de servicios.\n- **Google Sheets y el `+`:** los nodos de escritura usan **`Cell Format: RAW`**. Con `USER_ENTERED` un teléfono que empieza con `+` se interpreta como fórmula y la celda queda en `#ERROR!`. Lo mismo aplica al escribir a mano: formateá la columna `telefono` como **Texto sin formato**.\n- **Los updates parciales del MCP fallan contra esta instancia** (`request/body must NOT have additional properties`). Para editar este workflow por API hay que usar el update completo.\n- **Idempotencia:** si Chatwoot reenvía el mismo evento, la fila recién creada ya está abierta, así que la segunda pasada la actualiza en vez de duplicarla. `Interacciones` sí registra las dos.\n- **Condición de carrera conocida y aceptada:** el correlativo `OPP-XXXX` se calcula leyendo el máximo actual. Dos leads nuevos simultáneos podrían colisionar. `id_interaccion` no tiene ese problema (timestamp + sufijo aleatorio).",
+        "height": 1620,
+        "width": 1176
+      },
+      "id": "crm-lead-0018",
+      "name": "Documentación",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        -1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Chatwoot manda el telefono en E.164 pegado (+50679934925) pero el CRM lo guarda\n// en formato costarricense con espacio y guion (+506 7993-4925). El filtro de\n// Google Sheets es igualdad EXACTA: sin normalizar, ninguna busqueda haria match.\nconst lead = $input.first().json;\nconst crudo = String(lead.telefono || '').trim();\nconst digitos = crudo.replace(/\\D/g, '');\n\nlet telefono = crudo;\nif (digitos.length === 11 && digitos.startsWith('506')) {\n  telefono = `(+506) ${digitos.slice(3, 7)}-${digitos.slice(7, 11)}`;\n} else if (digitos.length === 8) {\n  // por si llega sin codigo de pais\n  telefono = `(+506) ${digitos.slice(0, 4)}-${digitos.slice(4, 8)}`;\n}\n\nreturn [{ json: { ...lead, telefono, telefono_crudo: crudo } }];"
+      },
+      "id": "crm-lead-0019",
+      "name": "CRM - Normalizar teléfono",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-leads-test-9f2a4c7e",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "test-wh-0001",
+      "name": "TEST - Webhook temporal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        544
+      ],
+      "webhookId": "329be4f0-fe90-4f1b-972f-828411d9e3d7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo para pruebas: aplana el body del webhook al shape que\n// entrega el Execute Workflow Trigger.\nreturn [{ json: $input.first().json.body }];"
+      },
+      "id": "test-wh-0002",
+      "name": "TEST - Desempaquetar body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        544
+      ]
+    }
+  ],
+  "connections": {
+    "Entrada — Datos del lead": {
+      "main": [
+        [
+          {
+            "node": "CRM - Normalizar teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Normalizar teléfono": {
+      "main": [
+        [
+          {
+            "node": "CRM - Buscar paciente por teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Buscar paciente por teléfono": {
+      "main": [
+        [
+          {
+            "node": "CRM - ¿Ya es paciente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - ¿Ya es paciente?": {
+      "main": [
+        [
+          {
+            "node": "CRM - Omitir (ya es paciente)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM - Buscar oportunidades por teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Buscar oportunidades por teléfono": {
+      "main": [
+        [
+          {
+            "node": "CRM - Detectar oportunidad abierta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Detectar oportunidad abierta": {
+      "main": [
+        [
+          {
+            "node": "CRM - ¿Hay oportunidad dormida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - ¿Hay oportunidad dormida?": {
+      "main": [
+        [
+          {
+            "node": "CRM - Cerrar oportunidad dormida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM - Leer catálogo de servicios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Cerrar oportunidad dormida": {
+      "main": [
+        [
+          {
+            "node": "CRM - Leer catálogo de servicios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Leer catálogo de servicios": {
+      "main": [
+        [
+          {
+            "node": "CRM - Adjuntar catálogo de servicios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Adjuntar catálogo de servicios": {
+      "main": [
+        [
+          {
+            "node": "CRM IA - Clasificar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM IA - Modelo clasificación": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "CRM IA - Clasificar mensaje",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM IA - Clasificar mensaje": {
+      "main": [
+        [
+          {
+            "node": "CRM - Validar salida de IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Validar salida de IA": {
+      "main": [
+        [
+          {
+            "node": "CRM - ¿Es reclamo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - ¿Es reclamo?": {
+      "main": [
+        [
+          {
+            "node": "CRM - Reclamo (sin oportunidad)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM - ¿Es lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Reclamo (sin oportunidad)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Preparar interacción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - ¿Es lead?": {
+      "main": [
+        [
+          {
+            "node": "CRM - ¿Es lead nuevo?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM - No es lead, no se registra",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - No es lead, no se registra": {
+      "main": [
+        [
+          {
+            "node": "CRM - Preparar interacción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - ¿Es lead nuevo?": {
+      "main": [
+        [
+          {
+            "node": "CRM - Leer todas las oportunidades (para ID)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM - Guardar oportunidad en CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Leer todas las oportunidades (para ID)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Generar id_oportunidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Generar id_oportunidad": {
+      "main": [
+        [
+          {
+            "node": "CRM - Guardar oportunidad en CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Guardar oportunidad en CRM": {
+      "main": [
+        [
+          {
+            "node": "CRM - Preparar interacción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Preparar interacción": {
+      "main": [
+        [
+          {
+            "node": "CRM - Registrar interacción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TEST - Webhook temporal": {
+      "main": [
+        [
+          {
+            "node": "TEST - Desempaquetar body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TEST - Desempaquetar body": {
+      "main": [
+        [
+          {
+            "node": "CRM - Normalizar teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

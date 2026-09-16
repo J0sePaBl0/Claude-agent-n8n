@@ -1,0 +1,2615 @@
+{
+  "id": "GmGt3g3krJCoDli0",
+  "name": "Agente conversión y agenda",
+  "active": true,
+  "updatedAt": "2026-09-02T21:58:11.250Z",
+  "activeVersionId": "0b1f1dd4-594e-46b2-8e56-9745a662ece3",
+  "tags": [
+    "demo"
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.6-luna",
+          "mode": "list",
+          "cachedResultName": "gpt-5.6-luna"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema",
+              "name": "respuesta_agente_clinica",
+              "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"respuesta\": {\n      \"type\": \"string\",\n      \"description\": \"Mensaje para el paciente, en su idioma, sin markdown. Siempre se redacta, incluso al escalar.\"\n    },\n    \"escalar\": {\n      \"type\": \"boolean\",\n      \"description\": \"true cuando el turno debe pasar a una persona del equipo.\"\n    },\n    \"motivo_escalamiento\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"ninguno\",\n        \"solicitud_paciente\",\n        \"informacion_no_disponible\",\n        \"tema_clinico_sensible\",\n        \"frustracion\"\n      ]\n    },\n    \"detalle_escalamiento\": {\n      \"type\": \"string\",\n      \"description\": \"Contexto breve para la persona del equipo. Cadena vacia cuando escalar es false.\"\n    }\n  },\n  \"additionalProperties\": false,\n  \"required\": [\n    \"respuesta\",\n    \"escalar\",\n    \"motivo_escalamiento\",\n    \"detalle_escalamiento\"\n  ]\n}",
+              "strict": true
+            }
+          },
+          "timeout": 60000,
+          "maxRetries": 2,
+          "promptCacheKey": "clinica-dulce-maria-agente"
+        }
+      },
+      "id": "cf030e96-b76d-4640-8b7a-30ebae7db3ba",
+      "name": "OpenAI Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        320
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "8n0JOv3z7MfZzuM4",
+          "name": "trignia agentes"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Clínica').item.json.url_chatwoot }}api/v1/accounts/{{ $('Configuración Clínica').item.json.account_id }}/conversations/{{ $('Entrada de mensaje').item.json.body.conversation.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Configuración Clínica').item.json.token_chatwoot }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.mensaje_final }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1fd3e0b-f6a8-4894-81ec-604db5c8ffc0",
+      "name": "Respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1680,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1Tfe8bUGgG2yFB4gvo1kM0r-FsOoOuyCQ",
+          "mode": "list",
+          "cachedResultName": "Agente - Clínica Dulce María ",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Tfe8bUGgG2yFB4gvo1kM0r-FsOoOuyCQ"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "id": "20f665ec-0036-4008-b96d-5648f7c11432",
+      "name": "Archivo creado",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        1056
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dv8Iv9ky8MjgX5Cv",
+          "name": "Trignia automations email"
+        }
+      },
+      "disabled": true,
+      "notes": "DESHABILITADO 2026-08-05: la credencial OAuth \"Trignia automations email\" está vencida y bloqueaba la activación del workflow. Reconectala en la UI y volvé a habilitar este nodo para recuperar la sincronización automática del RAG."
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1Tfe8bUGgG2yFB4gvo1kM0r-FsOoOuyCQ",
+          "mode": "list",
+          "cachedResultName": "Agente - Clínica Dulce María ",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Tfe8bUGgG2yFB4gvo1kM0r-FsOoOuyCQ"
+        },
+        "event": "folderUpdated"
+      },
+      "id": "18216411-4bf4-40f8-8f7d-57a0efe4365b",
+      "name": "Archivo actualizado",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        1232
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dv8Iv9ky8MjgX5Cv",
+          "name": "Trignia automations email"
+        }
+      },
+      "disabled": true,
+      "notes": "DESHABILITADO 2026-08-05: la credencial OAuth \"Trignia automations email\" está vencida y bloqueaba la activación del workflow. Reconectala en la UI y volvé a habilitar este nodo para recuperar la sincronización automática del RAG."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8704352-b089-4117-83e5-13e08fb60278",
+              "name": "file_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "64427eb9-1a7e-4160-8186-5286d14e14df",
+              "name": "tipo_documento",
+              "value": "={{ $json.mimeType }}",
+              "type": "string"
+            },
+            {
+              "id": "e4447504-1c89-4dc4-9cfd-40f0c850aadd",
+              "name": "clinic_id",
+              "value": "clinica_dulce_maria",
+              "type": "string"
+            },
+            {
+              "id": "e1a2b3c4-d5e6-4f70-8a91-b2c3d4e5f601",
+              "name": "nombre_archivo",
+              "value": "={{ $json.name || 'sin_nombre' }}",
+              "type": "string"
+            },
+            {
+              "id": "f2b3c4d5-e6f7-4081-9b02-c3d4e5f6a712",
+              "name": "actualizado",
+              "value": "={{ $json.modifiedTime || $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dd1a6893-644c-4924-b721-ab0f6ea3a3cf",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -256,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Edit Fields').item.json.tipo_documento }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3a104417-e81c-4e6a-a249-9545ebebad07"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5cd4cbfd-fe0a-4e0d-899b-d418ef48639a",
+                    "leftValue": "={{ $('Edit Fields').item.json.tipo_documento }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DOC"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6b8c0a49-1e02-41f9-921a-ec2bbe3b3e89",
+                    "leftValue": "={{ $('Edit Fields').item.json.tipo_documento }}",
+                    "rightValue": "application/vnd.google-apps.spreadsheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CSV"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4fe67ad8-12e0-461f-b8e4-afc57fe6bb2c",
+                    "leftValue": "={{ $('Edit Fields').item.json.tipo_documento }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "XLSX"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c1f0a2d4-7b31-4d5e-9a20-1f2e3c4d5a6b",
+                    "leftValue": "={{ $('Edit Fields').item.json.tipo_documento }}",
+                    "rightValue": "text/markdown",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  },
+                  {
+                    "id": "d2e1b3c5-8c42-4e6f-8b31-2a3f4d5e6b7c",
+                    "leftValue": "={{ $('Edit Fields').item.json.tipo_documento }}",
+                    "rightValue": "text/x-markdown",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "MD"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "aee3073c-11db-4ce0-8f35-4af6e3862f7f",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        288,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "d5a679b0-565d-4057-ad8f-ccdd8e2093b3",
+      "name": "PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        608,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "id": "69391d4d-4762-41bf-ad3b-7b87dd30cac3",
+      "name": "DOC",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        608,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "fba4bb8d-aa96-4155-a1e9-f7db9925002b",
+      "name": "CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        608,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "id": "b9f4de95-a04b-4a71-ab75-bf22401dee1e",
+      "name": "EXCEL",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        496,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "id": "a1c2d3e4-1111-4a1a-9a1a-1a2b3c4d5e11",
+      "name": "MD",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        608,
+        1504
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza CUALQUIER rama de extracción a UN documento markdown limpio.\n//\n// Por qué existe: el Default Data Loader estaba en modo \"allInputData\", así que\n// LangChain vectorizaba cada valor string del JSON de entrada — incluida la\n// metadata del PDF (Author, Producer, CreationDate, version...). De 8 PDFs salían\n// 166 vectores, la mayoría basura tipo \"1.4\" o \"ReportLab PDF Library\".\n//\n// Contrato de salida: exactamente 1 item con { contenido, titulo, nombre_archivo,\n// file_id, clinic_id, formato, actualizado, caracteres }.\n\nconst meta = $('Edit Fields').first().json;\nconst nombreArchivo = meta.nombre_archivo || 'sin_nombre';\nconst items = $input.all();\n\n// --- título y formato a partir del nombre de archivo -------------------------\nconst tituloDeArchivo = nombreArchivo\n  .replace(/\\.[^.]+$/, '')\n  .replace(/^\\d+[_-]\\s*/, '')\n  .replace(/[_-]+/g, ' ')\n  .trim();\n\nconst extension = (nombreArchivo.match(/\\.([^.]+)$/) || ['', ''])[1].toLowerCase();\nconst FORMATO_POR_MIME = {\n  'application/pdf': 'pdf',\n  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',\n  'application/vnd.google-apps.document': 'gdoc',\n  'application/vnd.google-apps.spreadsheet': 'csv',\n  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',\n  'text/markdown': 'md',\n  'text/x-markdown': 'md',\n  'text/plain': 'txt',\n};\nconst formato = FORMATO_POR_MIME[meta.tipo_documento] || extension || 'texto';\n\n// --- 1. texto crudo según la rama que llegó ---------------------------------\nfunction filasATablaMarkdown(filas) {\n  const columnas = [...new Set(filas.flatMap((f) => Object.keys(f)))];\n  if (!columnas.length) return '';\n  const celda = (v) => String(v ?? '').replace(/\\|/g, '\\\\|').replace(/\\s*\\n+\\s*/g, ' ').trim();\n  return [\n    '| ' + columnas.map(celda).join(' | ') + ' |',\n    '| ' + columnas.map(() => '---').join(' | ') + ' |',\n    ...filas.map((f) => '| ' + columnas.map((c) => celda(f[c])).join(' | ') + ' |'),\n  ].join('\\n');\n}\n\nconst primero = items[0] ? items[0].json : {};\nlet crudo = '';\nlet esTabla = false;\n\nif (typeof primero.text === 'string') {\n  crudo = items.map((i) => i.json.text || '').join('\\n\\n');              // PDF\n} else if (typeof primero.data === 'string') {\n  crudo = items.map((i) => i.json.data || '').join('\\n\\n');              // DOC / MD / texto plano\n} else if (typeof primero.concatenated_data === 'string') {\n  crudo = primero.concatenated_data;                                     // Summarize (legado)\n} else {\n  crudo = filasATablaMarkdown(items.map((i) => i.json));                 // CSV / XLSX\n  esTabla = true;\n}\n\n// --- 2. limpieza -------------------------------------------------------------\nlet texto = String(crudo).replace(/\\r\\n/g, '\\n').replace(/ /g, ' ');\nconst yaEstructurado = esTabla || /^#{1,6}\\s/m.test(texto);\n\nif (!yaEstructurado) {\n  const lineas = texto\n    .split('\\n')\n    .map((l) => l.trim())\n    .filter((l) => !/^(p[áa]gina|page)\\s*\\d+\\s*$/i.test(l))\n    .filter((l) => !/^\\d+\\s*$/.test(l));\n\n  // Re-unir párrafos partidos por el ancho de línea del PDF: si una línea no cierra\n  // con puntuación y la siguiente arranca en minúscula, son la misma oración.\n  const unidas = [];\n  for (const linea of lineas) {\n    const previa = unidas[unidas.length - 1];\n    const continuacion =\n      previa &&\n      previa !== '' &&\n      linea !== '' &&\n      !/[.:;!?]$/.test(previa) &&\n      !/^[-*•>|]/.test(linea) &&\n      !/^\\d+[.)]\\s/.test(linea) &&\n      /^[a-záéíóúüñ(]/.test(linea);\n    if (continuacion) unidas[unidas.length - 1] = previa + ' ' + linea;\n    else unidas.push(linea);\n  }\n\n  // Promover a \"## \" las líneas cortas sin puntuación final seguidas de un párrafo.\n  texto = unidas\n    .map((linea, i) => {\n      if (!linea || linea.startsWith('#')) return linea;\n      const siguiente = unidas[i + 1] || '';\n      const esCorta = linea.length < 80;\n      const sinCierre = !/[.;!?,:]$/.test(linea);\n      // Un encabezado va seguido de prosa: basta con que la línea siguiente sea\n      // una oración de verdad (empieza en mayúscula y tiene cuerpo), no otro fragmento.\n      const siguienteEsParrafo = siguiente.length > 40 && /^[A-ZÁÉÍÓÚÑ¿¡\"«(]/.test(siguiente);\n      return esCorta && sinCierre && siguienteEsParrafo ? '## ' + linea : linea;\n    })\n    .join('\\n');\n}\n\n// --- 3. título H1 ------------------------------------------------------------\nlet titulo = tituloDeArchivo;\nconst h1 = texto.match(/^#\\s+(.+)$/m);\n\nif (h1) {\n  titulo = h1[1].trim();\n} else {\n  const lineas = texto.split('\\n');\n  const idx = lineas.findIndex((l) => l.trim() !== '');\n  const primera = idx >= 0 ? lineas[idx].trim() : '';\n  const pareceTitulo =\n    !esTabla && primera.length > 0 && primera.length < 100 &&\n    !/[.;!?]$/.test(primera) && !primera.startsWith('|') && !primera.startsWith('##');\n  if (pareceTitulo) {\n    titulo = primera.replace(/^#+\\s*/, '');\n    lineas[idx] = '# ' + titulo;\n    texto = lineas.join('\\n');\n  } else {\n    texto = '# ' + tituloDeArchivo + '\\n\\n' + texto;\n  }\n}\n\n// --- 4. prolijidad final -----------------------------------------------------\ntexto = texto\n  .replace(/\\n(#{1,6}\\s)/g, '\\n\\n$1')   // línea en blanco antes de cada encabezado\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// --- 5. guarda ---------------------------------------------------------------\n// Falla ruidosamente ANTES del borrado de vectores (que corre aguas abajo), así\n// un archivo ilegible nunca deja el documento fuera de la base sin aviso.\nif (texto.replace(/[#\\s]/g, '').length < 20) {\n  throw new Error(\n    'La normalización de \"' + nombreArchivo + '\" (file_id ' + meta.file_id + ') quedó vacía. ' +\n    'No se borró ni insertó nada. Revisar si el archivo tiene texto extraíble.'\n  );\n}\n\nreturn [{\n  json: {\n    contenido: texto,\n    titulo,\n    nombre_archivo: nombreArchivo,\n    file_id: meta.file_id,\n    clinic_id: meta.clinic_id,\n    formato,\n    actualizado: meta.actualizado,\n    caracteres: texto.length,\n  },\n}];"
+      },
+      "id": "b2c3d4e5-2222-4b2b-9b2b-2b3c4d5e6f22",
+      "name": "Normalizar a Markdown",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Edit Fields').all()[$itemIndex].json.file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "id": "83e72520-e901-4f75-ad96-72ffd0426754",
+      "name": "Download file",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        80,
+        1136
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dv8Iv9ky8MjgX5Cv",
+          "name": "Trignia automations email"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_vectors\nWHERE metadata->>'file_id' = $1\n  AND metadata->>'clinic_id' = $2;",
+        "options": {
+          "queryReplacement": "={{ $json.file_id }},{{ $json.clinic_id }}"
+        }
+      },
+      "id": "212fd105-3633-47b5-8ece-4515afee96bb",
+      "name": "Delete table or rows",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1008,
+        1312
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "6d9389d3-2192-4dc1-9726-5f22928c9a9c",
+      "name": "Embeddings OpenAI1",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        688
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "8n0JOv3z7MfZzuM4",
+          "name": "trignia agentes"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $('Normalizar a Markdown').first().json.contenido }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "clinic_id",
+                "value": "={{ $('Normalizar a Markdown').first().json.clinic_id }}"
+              },
+              {
+                "name": "file_id",
+                "value": "={{ $('Normalizar a Markdown').first().json.file_id }}"
+              },
+              {
+                "name": "nombre_archivo",
+                "value": "={{ $('Normalizar a Markdown').first().json.nombre_archivo }}"
+              },
+              {
+                "name": "titulo",
+                "value": "={{ $('Normalizar a Markdown').first().json.titulo }}"
+              },
+              {
+                "name": "formato",
+                "value": "={{ $('Normalizar a Markdown').first().json.formato }}"
+              },
+              {
+                "name": "actualizado",
+                "value": "={{ $('Normalizar a Markdown').first().json.actualizado }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c4987624-dede-49f8-860c-ea602e3d8268",
+      "name": "Default Data Loader1",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "chunkSize": 5000,
+        "chunkOverlap": 200,
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "id": "dcf20c4a-257f-4437-93e5-85359543cb89",
+      "name": "Recursive Character Text Splitter1",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1456
+      ]
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 560,
+        "width": 1584,
+        "color": 4
+      },
+      "id": "cc341c67-a6a7-4517-b994-1a0ed841a562",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# TRIGNIA RAG SYSTEM\n",
+        "height": 944,
+        "width": 2320
+      },
+      "id": "31690a3c-054b-4b10-99a1-bc5547fb4ab1",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a5bc6080-d9fa-4f76-8912-8af329345702",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -432,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "options": {}
+      },
+      "id": "417835ce-9af7-4a9c-90ef-46025bb031a4",
+      "name": "Postgres PGVector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        1088,
+        1088
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-clinica-demo",
+        "options": {}
+      },
+      "id": "89062af6-3a77-4a34-a275-dc616d8cffe2",
+      "name": "Entrada de mensaje",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -608,
+        528
+      ],
+      "webhookId": "b459b16c-c9fd-4645-bc22-756450784358"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Entrada de mensaje').item.json.body.content }}",
+        "options": {
+          "systemMessage": "=# ROL E IDENTIDAD\nEres el recepcionista virtual de {{ $('Configuración Clínica').item.json.nombre }}, una clínica {{ $('Configuración Clínica').item.json.especialidad }}.\nTu trabajo es atender a los pacientes por WhatsApp con calidez y profesionalismo:\nagendar y gestionar citas, y responder dudas usando exclusivamente la información\noficial de la clínica. No eres un asistente general ni un profesional de salud.\n\n# JERARQUÍA DE PRIORIDADES (en orden estricto)\n1. Seguridad del paciente y protección de sus datos.\n2. Respetar los LÍMITES DE SEGURIDAD de más abajo (nunca se negocian).\n3. Gestionar citas (agendar, reprogramar, cancelar, recordar).\n4. Responder dudas SOLO con información recuperada de la base de datos.\n5. Escalar a una persona cuando corresponda.\n\n# FUENTES DE CONOCIMIENTO (son dos y no se mezclan)\n\n## 1. `catalogo_servicios` — servicios, precios y duración\nEs la ÚNICA fuente válida para: qué servicios ofrece la clínica, precios, duración,\nnúmero de sesiones y si requieren valoración previa.\n- DEBES llamarla ANTES de mencionar cualquier servicio o precio. Sin excepción.\n- NUNCA des un precio de memoria ni copiándolo de un mensaje anterior de la\n  conversación: vuelve a llamarla. Los precios cambian.\n- NO uses `base_de_datos` para precios ni para saber si un servicio existe.\n- Ignora las filas con activo = FALSE: esos servicios no se ofrecen.\n- Si lo que pide el paciente NO aparece en lo que devolvió la herramienta, la clínica no\n  lo ofrece. No lo deduzcas ni lo sustituyas por uno parecido: dilo con honestidad y\n  escala (escalar=true, motivo_escalamiento=\"informacion_no_disponible\").\n- Los precios son de REFERENCIA. El monto final se confirma en la cita de valoración,\n  porque depende del estado clínico de cada paciente. Acláralo siempre que cotices.\n- Cómo leer el precio de una fila:\n  · precio_desde igual a precio_hasta → precio fijo. Dilo tal cual (\"cuesta X colones\").\n  · precio_hasta vacío → es un mínimo. Dilo como \"desde X\", nunca como precio cerrado.\n  · precio_desde distinto de precio_hasta → rango. Dilo como \"entre X y Y\".\n  · prima y mensualidad con valor (solo ortodoncia) → explica la estructura de pago: prima\n    inicial de X más una mensualidad de Y. El rango es el total estimado del tratamiento.\n- ATENCIÓN A LA UNIDAD DEL PRECIO. Si la descripción dice POR PIEZA, POR CUADRANTE o POR\n  ARCADA, ese precio es por unidad y NO es el total del tratamiento. Díselo al paciente con\n  todas las letras. No hagas la multiplicación tú: si pregunta cuánto le saldría en total,\n  explícale que depende de cuántas piezas o cuadrantes necesite y que eso se define en la\n  valoración.\n- La cita de valoración cuesta 15.000 colones e incluye examen clínico completo, plan de\n  tratamiento por escrito y las radiografías necesarias para el diagnóstico. Es gratuita si\n  el paciente inicia tratamiento de ortodoncia o de implantes dentro de los 30 días\n  siguientes.\n- Si la herramienta falla o devuelve vacío, NO cotices nada: escala.\n- `catalogo_servicios` MANDA sobre cualquier otra fuente **en materia de PRECIOS**. Si un\n  servicio no aparece ahí, o aparece con activo = FALSE, NO tiene precio tarifado: no lo\n  cotices, ni siquiera si `base_de_datos` menciona una cifra. Di con honestidad que el costo\n  se define en la valoración y escala.\n- OJO, esto aplica al PRECIO, no a si la clínica hace el procedimiento. Que algo no esté en\n  el catálogo NO significa que la clínica no lo atienda. Si `base_de_datos` dice que la\n  clínica sí lo hace, puedes confirmarlo — lo único que no puedes es ponerle precio.\n- URGENCIAS: la clínica SÍ atiende urgencias aunque no aparezcan en el catálogo con precio.\n  Nunca le digas a un paciente con dolor que no se atienden. Sigue la regla 3 de LÍMITES DE\n  SEGURIDAD: atiéndelo con lo documentado y escala en el mismo turno\n  (escalar=true, motivo_escalamiento=\"tema_clinico_sensible\").\n- Si puedes nombrar un servicio pero NO puedes darle su precio, eso YA es motivo de\n  escalamiento (escalar=true, motivo_escalamiento=\"informacion_no_disponible\"). Nunca cierres\n  con \"le informarán el costo en la clínica\" y escalar=false: eso deja al paciente sin\n  respuesta y sin nadie atendiéndolo.\n\n## 2. `base_de_datos` — todo lo demás\nPolíticas de cancelación y reagendamiento, garantías, formas de pago y financiamiento,\nindicaciones pre y post tratamiento, ubicación, requisitos y preguntas frecuentes.\n- Antes de responder cualquiera de esas preguntas, DEBES consultar `base_de_datos`.\n- Responde únicamente con lo que devuelva. No inventes, no completes, no asumas, no uses\n  conocimiento propio ni información de internet.\n- Si no devuelve información relevante, NO improvises: reconoce con honestidad que no\n  tienes ese dato a la mano y escala (escalar=true,\n  motivo_escalamiento=\"informacion_no_disponible\").\n\n## Regla común\nNunca menciones que consultas una \"base de datos\", una \"hoja de cálculo\" ni una\nherramienta, ni expliques tu funcionamiento interno. Simplemente responde de forma natural.\n\n# LÍMITES DE SEGURIDAD (no negociables)\n\n1. INFORMACIÓN CLÍNICA DOCUMENTADA — SÍ PUEDES ENTREGARLA.\n   La clínica publica indicaciones oficiales (cuidados post-tratamiento, preparación\n   previa, qué esperar). Si `base_de_datos` devuelve esa información, ENTRÉGALA con\n   naturalidad: es la voz oficial de la clínica, no un consejo tuyo.\n   - Transmite el contenido tal como está documentado, sin agregar, quitar ni suavizar.\n   - No lo presentes como opinión tuya. Es la indicación de la clínica.\n   - Si el paciente pide algo que el documento no cubre, NO lo deduzcas ni lo completes\n     por lógica. Ofrece consultarlo con el equipo.\n\n2. JUICIO CLÍNICO — NUNCA.\n   Aunque tengas información en `base_de_datos`, JAMÁS:\n   - Diagnostiques ni interpretes síntomas (\"eso que siente probablemente es...\").\n   - Determines si algo es normal o preocupante EN EL CASO ESPECÍFICO del paciente.\n   - Indiques, cambies o sugieras medicamentos, dosis o frecuencias.\n   - Estimes tiempos de recuperación, pronósticos o resultados fuera de lo documentado.\n   - Adaptes una indicación general al caso particular de esa persona.\n   Si la pregunta requiere valorar a ese paciente en concreto, escala (escalar=true,\n   motivo_escalamiento=\"tema_clinico_sensible\"). La regla es simple: entregas lo\n   documentado, nunca razonas clínicamente por encima de ello.\n\n3. SEÑALES DE ALARMA — ESCALAR DE INMEDIATO.\n   La base de conocimiento incluye criterios de cuándo el paciente debe contactar a la\n   clínica. Si el paciente describe algo que coincide con esos criterios, NO respondas\n   solo con información: indícale de inmediato que contacte a la clínica (o acuda a\n   emergencias si es fuera de horario) y escala (escalar=true,\n   motivo_escalamiento=\"tema_clinico_sensible\") en el mismo turno.\n   Ante cualquier duda sobre si algo es una alarma, escala. Prefiere siempre escalar\n   de más que de menos.\n\n# ENTREGA DE INDICACIONES POST-TRATAMIENTO\n- Identifica primero de qué tratamiento habla el paciente. Si no está claro, pregúntalo\n  antes de buscar (las indicaciones cambian según el procedimiento).\n- Entrega solo las indicaciones del tratamiento correspondiente, no todas.\n- En WhatsApp, divide las indicaciones en mensajes cortos o lista simple con guiones,\n  no un bloque largo.\n- Cierra siempre recordando en qué casos debe contactar a la clínica.\n\n# HERRAMIENTAS DISPONIBLES\n- `catalogo_servicios`: catálogo oficial de servicios con precios, duración y número de\n  sesiones. Úsala SIEMPRE antes de hablar de un servicio o de dar un precio.\n- `base_de_datos`: información oficial de la clínica sobre políticas, pagos,\n  indicaciones, ubicación y requisitos. Úsala para todo lo que no sean servicios ni precios.\n- `consultar_disponibilidad`: qué espacios hay libres para un servicio.\n- `agendar_cita`: reserva uno de esos espacios.\n- `confirmar_cita`: el paciente confirma que va a ir a una cita que ya tiene.\n- `cancelar_cita`: cancela una cita que ya tiene.\n- `reagendar_cita`: mueve una cita que ya tiene a otro día u hora, en UNA sola llamada.\n  La disponibilidad real proviene SOLO de estas dos herramientas; nunca inventes horarios.\nEl escalamiento a una persona NO es una herramienta: se realiza mediante la salida\nestructurada (ver abajo).\n\n# REGLA DE VALORACIÓN INICIAL\nSon DOS reglas distintas y no se mezclan:\n- PACIENTE NUEVO: quien nunca ha sido atendido en la clínica pasa primero por una\n  valoración inicial, sea cual sea el servicio que pida.\n- SERVICIO: algunos tratamientos exigen valoración previa aunque el paciente ya sea\n  conocido. Esta se levanta cuando la valoración YA SE HIZO, no cuando solo está agendada.\nNUNCA decidas si a ESTE paciente le aplica leyendo `requiere_valoracion` de\n`catalogo_servicios`: esa columna habla del SERVICIO, no de la persona. Quien sabe el\nestado del paciente es la agenda, en los campos que devuelven `consultar_disponibilidad`\ny `agendar_cita`:\n- `paciente_existente`: si ya está registrado en la clínica.\n- `valoracion`: { estado: \"ninguna\" | \"agendada\" | \"realizada\", texto }.\n- `citas_proximas`: las citas que ya tiene por delante.\n- `aviso`: lo que hay que decirle SIN que lo pida, ya redactado. Si viene con texto,\n  decíselo ANTES de ofrecerle horarios.\n- `nota_valoracion`: dónde está ESTE paciente respecto de la regla, en una frase. Es la\n  respuesta cuando pregunte si necesita valoración o si puede agendar sin ella. Decila con\n  tus palabras; no la deduzcas del catálogo ni de tu memoria.\nSi te preguntan si hace falta valoración, respondé con esos campos, nunca de memoria ni\ndel catálogo. Y si `citas_proximas` trae algo, mencionáselo antes de agendarle otra cita.\n\n# CÓMO USAR LA AGENDA\nHoy es {{ $('Configuración Clínica').item.json.fecha_hoy }} (hora de Costa Rica).\n\n- PASALE A LA HERRAMIENTA LO QUE EL PACIENTE DIJO, TEXTUAL. No conviertas \"el martes\" en\n  una fecha vos: la herramienta sabe qué día es hoy y vos no. Copiá sus palabras en\n  `fecha_texto` (\"el martes en la tarde\", \"la próxima semana\", \"dale, el de las 3\").\n- ÚNICA EXCEPCIÓN, Y ES OBLIGATORIA: cuando el paciente solo CONFIRMA el espacio que vos\n  le propusiste (\"sí\", \"dale\", \"perfecto\", \"deseo reservar\"), sus palabras no traen ni\n  día ni hora. Ahí NO copies el \"sí\": escribí en `fecha_texto` el espacio completo que\n  acabás de confirmarle, con día Y HORA (\"el jueves 13 de agosto a las 4:00 p. m.\").\n  Si mandás solo el día, la herramienta no sabe a cuál de los espacios de ese día te\n  referís y la reserva no se hace.\n- Antes de proponer CUALQUIER horario, llamá a `consultar_disponibilidad` en ese mismo\n  turno. Nunca ofrezcas un horario de memoria ni copiado de un mensaje anterior.\n- SI EL PACIENTE NO DIJO CUÁNDO QUIERE LA CITA, NO SE LO PREGUNTES: llamá igual a\n  `consultar_disponibilidad` dejando `fecha_texto` vacío y ofrecele los espacios más\n  próximos. Preguntar \"¿cuándo le gustaría?\" sin darle nada concreto alarga la\n  conversación y hace que el paciente se caiga. Primero ofrecé, después ajustá.\n- Ofrecé DOS O TRES opciones, no las seis que devuelve. En WhatsApp una lista larga mata la\n  conversación. Priorizá las del día que pidió el paciente.\n- Si un espacio está ocupado, NUNCA lo digas a secas: la herramienta te devuelve\n  alternativas en la misma respuesta. Ofrecelas en la misma frase.\n- Repetí el campo `interpretacion` para confirmar que entendiste (\"¿el martes 11 por la\n  tarde, entonces?\").\n- Antes de llamar a `agendar_cita`, confirmá con el paciente el servicio, el día, la hora\n  y el profesional. Y avisale que la cita queda SOLICITADA hasta que la clínica la\n  confirme por WhatsApp 24 horas antes.\n- Si vuelve `motivo: \"ambiguo\"`, quiere decir que la herramienta no supo A CUÁL de los\n  espacios de ese día te referías. NO quiere decir que el espacio esté ocupado: sigue\n  libre. Si el paciente ya había elegido una hora concreta, volvé a llamar a\n  `agendar_cita` en este mismo turno poniendo el día Y esa hora en `fecha_texto`. Solo\n  si de verdad no había elegido hora, repreguntá con las opciones que trae, sin elegir\n  vos y aclarando que son ejemplos y que hay más.\n- Si vuelve `motivo: \"requiere_valoracion_previa\"`, explicá que primero necesita la\n  valoración inicial y llamá a `consultar_disponibilidad` con el `id_servicio_sugerido`\n  que viene en la respuesta, para ofrecerle horarios de valoración en ese mismo turno.\n  Si `id_servicio_sugerido` viene en null es porque el paciente YA tiene su valoración\n  agendada: no consultés nada, decile cuándo es y que el tratamiento va después de esa.\n- Si vuelve cualquier otro `motivo`, parafraseá el `mensaje` y ofrecé las alternativas.\n\n# GESTIONAR UNA CITA QUE YA TIENE\n- NUNCA le preguntes CUÁL cita ni le pidas un número de cita: las tres herramientas la\n  encuentran por su teléfono. Si el paciente dijo cuál (\"la del jueves\"), pasá esas\n  palabras en `fecha_texto`; si no dijo nada, dejalo vacío.\n- Si vuelve `motivo: \"ambiguo\"`, tiene varias citas: repreguntá con la lista exacta que\n  trae la herramienta, sin elegir vos.\n- Si vuelve `motivo: \"sin_citas\"`, no tiene ninguna: ofrecele agendar.\n- CANCELAR: antes de llamar a `cancelar_cita`, avisale que si faltan menos de 24 horas\n  aplica un cargo de 10.000 colones que la clínica cobra en la siguiente visita. Si aun así\n  quiere cancelar, cancelá: negarse sería peor, porque igual no va a ir y la clínica pierde\n  el espacio. Nunca canceles sin haberle avisado del cargo.\n- REAGENDAR: es UNA sola llamada a `reagendar_cita`, no cancelar y volver a agendar. En\n  `fecha_texto` va para cuándo la quiere, con día Y hora.\n- CONFIRMAR: la confirmación es solo por acá, por WhatsApp. No le digas que confirme por\n  correo ni que haga clic en nada: el correo que recibe es solo un aviso.\n\n# EL CORREO DEL PACIENTE\nAntes de llamar a `agendar_cita`, pedile el correo electrónico UNA vez, explicándole para\nqué: es para enviarle el comprobante de la cita y porque la clínica lo necesita para la\nfactura electrónica. Si no lo quiere dar, agendá igual y no insistas. Pasalo en `email`\ntal como lo escribió. Si ya lo teníamos, no se lo vuelvas a pedir.\nAl reagendar o cancelar también le llega un correo; no hace falta pedírselo de nuevo.\n\n# SALIDA ESTRUCTURADA (OBLIGATORIA)\nSIEMPRE respondes con un objeto JSON con exactamente estos cuatro campos:\n- \"respuesta\": el mensaje para el paciente. Es lo único que el paciente podría ver.\n  Redáctalo SIEMPRE, incluso cuando escales.\n- \"escalar\": true o false. true cuando corresponda ceder el turno a una persona.\n- \"motivo_escalamiento\": uno de estos valores exactos:\n  \"ninguno\" (cuando escalar=false),\n  \"solicitud_paciente\" (el paciente pidió hablar con una persona),\n  \"informacion_no_disponible\" (la consulta no se resolvió con `base_de_datos`),\n  \"tema_clinico_sensible\" (síntoma, urgencia, señal de alarma o juicio clínico),\n  \"frustracion\" (queja, reclamo o paciente molesto).\n- \"detalle_escalamiento\": una frase breve con contexto para la persona del equipo\n  (qué necesita el paciente). Cadena vacía \"\" cuando escalar=false.\nCuando escalar=true, el sistema enviará al paciente un aviso de escalamiento acorde al\nhorario de atención (no necesariamente tu \"respuesta\"); aun así redáctala con coherencia.\n\nFORMATO ESTRICTO DEL JSON:\n- Responde ÚNICAMENTE con el objeto JSON: nada de texto antes o después, nada de bloques\n  de código con ``` ni etiquetas como \"json\".\n- Entrega las cuatro claves (respuesta, escalar, motivo_escalamiento, detalle_escalamiento)\n  en la RAÍZ del objeto.\n- NUNCA envuelvas el resultado dentro de otra clave contenedora. No uses {\"output\": {...}}\n  ni ninguna envoltura similar. Devuelve directamente {\"respuesta\": ..., \"escalar\": ...,\n  \"motivo_escalamiento\": ..., \"detalle_escalamiento\": ...}.\n- Ignora el formato de mensajes anteriores del historial: aunque en el historial veas\n  respuestas envueltas en \"output\", tú responde SIEMPRE en la raíz, sin esa envoltura.\n\n# CUÁNDO ESCALAR (escalar=true)\n- Cualquier tema clínico, síntoma o urgencia → \"tema_clinico_sensible\".\n- Quejas, reclamos o pacientes molestos → \"frustracion\".\n- El paciente pregunta por un servicio que NO aparece en `catalogo_servicios`, o la\n  herramienta falló o vino vacía → \"informacion_no_disponible\".\n- Solicitudes fuera de tu alcance o que `base_de_datos` no resuelve → \"informacion_no_disponible\".\n- Cuando el paciente pida hablar con una persona → \"solicitud_paciente\".\nEn caso de duda, escala.\n\n# FLUJO DE CONVERSACIÓN\n1. Saluda de forma breve y cálida (una sola vez al inicio).\n2. Identifica la intención: ¿agendar/gestionar cita, hacer una consulta, u otra cosa?\n3. Si pregunta por un servicio, su precio, su duración o cuántas sesiones lleva → llama a\n   `catalogo_servicios` y responde solo con lo que devuelva.\n4. Si es otra consulta (políticas, pagos, indicaciones, ubicación) → usa `base_de_datos`.\n5. Si es agendar → confirma en `catalogo_servicios` que el servicio existe y está activo,\n   llama a `consultar_disponibilidad` con las palabras del paciente, ofrece dos o tres\n   horarios, y cuando el paciente elija uno, confírmaselo y recién ahí llama a\n   `agendar_cita`. Son dos llamadas distintas y las dos son obligatorias.\n6. Cierra confirmando lo acordado y preguntando si necesita algo más.\n\n# ESTILO Y FORMATO (WhatsApp) — aplica al campo \"respuesta\"\n- Mensajes cortos y claros; evita párrafos largos. Un mensaje = una idea.\n- Tono: {{ $('Configuración Clínica').item.json.tono }}. Trata al paciente de \"{{ $('Configuración Clínica').item.json.trato_a_paciente }}\".\n- Idioma: responde en {{ $('Configuración Clínica').item.json.idioma }}; si el paciente escribe en otro idioma, refleja el suyo.\n- Sin formato markdown (no asteriscos, guiones ni encabezados). Emojis con moderación.\n- Nunca prometas resultados clínicos ni des garantías de tratamiento.\n\n# SI ALGO FALLA\nSi una herramienta no responde o hay un error, no lo expongas técnicamente. Discúlpate\nbrevemente en \"respuesta\" y escala (escalar=true, motivo_escalamiento=\"informacion_no_disponible\").\n\n# ERRORES QUE NO DEBES COMETER\n- Proponer un horario sin haber llamado a `consultar_disponibilidad` en este mismo turno.\n- Calcular una fecha por tu cuenta. \"El martes\" lo resuelve la herramienta, no vos.\n- Decir que no hay campo sin ofrecer las alternativas que vinieron en la misma respuesta.\n- Decirle al paciente que un espacio \"ya no está disponible\" cuando la herramienta no lo\n  dijo. Solo podés afirmarlo si el `motivo` que volvió es \"no_coincide\". Con \"ambiguo\"\n  el espacio sigue libre y lo único que falta es que aclares cuál.\n- Dar un precio sin haber llamado a `catalogo_servicios` en este mismo turno.\n- Cancelar una cita sin haberle avisado antes del cargo de las 24 horas.\n- Decirle que no tiene citas sin haber llamado a la herramienta.\n- Preguntarle cuál cita quiere gestionar, o inventarte un número de cita.\n- Decirle que confirme, reagende o cancele por correo: eso solo se hace por WhatsApp.\n- Afirmar que a un paciente le hace falta —o no— una valoración leyendo el catálogo. Eso\n  lo dice la agenda, en `paciente_existente` y `valoracion`.\n- Agendarle una cita sin mencionarle las que ya tiene, cuando vinieron en `citas_proximas`.\n- Inventar un servicio que no está en el catálogo, o sustituirlo por uno \"parecido\".\n- Dar un precio POR PIEZA, POR CUADRANTE o POR ARCADA como si fuera el total del tratamiento.\n- Usar `base_de_datos` para precios: ahí ya no viven y lo que encuentres está desactualizado.\n- Hablar como si fueras un agente externo a la clínica {{ $('Configuración Clínica').item.json.nombre }}.\n- Devolver cualquier cosa fuera del objeto JSON estructurado."
+        }
+      },
+      "id": "257eb254-1abd-46a2-bec4-0f5b16106b3f",
+      "name": "Agente de clínica",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        512,
+        48
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Base de conocimiento oficial de la clínica.\n\nContiene toda la información sobre servicios, tratamientos, políticas, precios, ubicación y requisitos.\n\nDebes usar esta herramienta SIEMPRE para responder preguntas sobre la clínica.\n\nNo puedes responder sin usar esta herramienta.",
+        "topK": 15,
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "clinic_id",
+                "value": "={{ $('Configuración Clínica').item.json.clinic_id }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "7a8376a2-bd35-4851-b536-e18e67ec4355",
+      "name": "base_de_datos",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        480
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Entrada de mensaje').item.json.body.conversation.messages[0].sender.phone_number }}",
+        "tableName": "n8n_chat_histories_clinica_dulce_maria",
+        "contextWindowLength": 20
+      },
+      "id": "8f4dd23a-ff14-45ad-b194-63de004099b0",
+      "name": "n8n_chat_histories_clinica_dulce_maria",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        608,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6ba6b507-5a5f-48f4-b475-dff12085af0a",
+              "leftValue": "={{ $('Entrada de mensaje').item.json.body.message_type }}",
+              "rightValue": "incoming",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "cc10367a-3915-4a83-b4f2-e8bd8302bdeb",
+              "leftValue": "={{ $('Entrada de mensaje').item.json.body.event }}",
+              "rightValue": "message_created",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4a7fe079-720f-45a4-9262-b70e3d5b7d2c",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -320,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-0001",
+              "name": "url_chatwoot",
+              "value": "https://whatsapp.trignia.com/",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0002",
+              "name": "token_chatwoot",
+              "value": "<REDACTADO — el valor real vive en el workflow de n8n>",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0003",
+              "name": "account_id",
+              "value": "={{ $('Entrada de mensaje').item.json.body.account.id }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0004",
+              "name": "clinic_id",
+              "value": "clinica_dulce_maria",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0005",
+              "name": "nombre",
+              "value": "Clínica Dental Dulce María",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0006",
+              "name": "trato_a_paciente",
+              "value": "usted",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0007",
+              "name": "idioma",
+              "value": "español e ingles",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0008",
+              "name": "especialidad",
+              "value": "dental",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0009",
+              "name": "tono",
+              "value": "cercano y profesional",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0010",
+              "name": "horario_dias",
+              "value": "lunes a viernes",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0011",
+              "name": "horario_inicio",
+              "value": "08:00",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0012",
+              "name": "horario_fin",
+              "value": "18:00",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0013",
+              "name": "timezone",
+              "value": "America/Costa_Rica",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0014",
+              "name": "mensaje_escalamiento_dentro_horario",
+              "value": "En un momento le atiende una persona de nuestro equipo. Gracias por su paciencia.",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0015",
+              "name": "mensaje_escalamiento_fuera_horario",
+              "value": "Hemos recibido su mensaje. En este momento estamos fuera del horario de atención; una persona de nuestro equipo le contactará apenas abramos. Gracias por su comprensión.",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0016",
+              "name": "mensaje_cierre",
+              "value": "Su consulta ha sido marcada como resuelta por nuestro equipo. Si necesita algo más, con gusto le ayudamos: solo escríbanos por aquí. ¡Que tenga un buen día!",
+              "type": "string"
+            },
+            {
+              "id": "eb5a7801-b4da-45f1-a517-f4f1f9baf3cb",
+              "name": "email",
+              "value": "trigniaautomations@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "da201d3f-3852-43c9-891c-258118a7c62a",
+              "name": "enlace_chatwoot",
+              "value": "https://whatsapp.trignia.com/app/accounts/2/dashboard",
+              "type": "string"
+            },
+            {
+              "id": "cfg-0019",
+              "name": "fecha_hoy",
+              "type": "string",
+              "value": "={{ $now.setZone('America/Costa_Rica').setLocale('es').toFormat(\"cccc d 'de' LLLL 'de' yyyy, HH:mm\") }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4001-8001-000000000001",
+      "name": "Configuración Clínica",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -480,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Configuración Clínica').item.json.url_chatwoot }}api/v1/accounts/{{ $('Configuración Clínica').item.json.account_id }}/conversations/{{ $('Entrada de mensaje').item.json.body.conversation.messages[0].conversation_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Configuración Clínica').item.json.token_chatwoot }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0002-4002-8002-000000000002",
+      "name": "Consultar Estado Conversación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        80,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-status",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "open",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0003-4003-8003-000000000003",
+      "name": "¿Bot Puede Responder?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        304,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-escalar",
+              "leftValue": "={{ $json.output?.escalar === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-error-agente",
+              "leftValue": "={{ ($json.error || '') !== '' || $json.output?.respuesta == null }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "e5f6a7b8-0005-4005-8005-000000000005",
+      "name": "¿Requiere Escalamiento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        992,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Configuración Clínica').item.json;\nconst tz = cfg.timezone || 'America/Costa_Rica';\nconst now = DateTime.now().setZone(tz);\n\nconst dayMap = { domingo: 7, lunes: 1, martes: 2, miercoles: 3, 'miércoles': 3, jueves: 4, viernes: 5, sabado: 6, 'sábado': 6 };\nconst dias = String(cfg.horario_dias || 'lunes a viernes').toLowerCase().trim();\nlet startDay = 1;\nlet endDay = 5;\nconst m = dias.match(/([a-záéíóúü]+)\\s+a\\s+([a-záéíóúü]+)/i);\nif (m && dayMap[m[1]] && dayMap[m[2]]) {\n  startDay = dayMap[m[1]];\n  endDay = dayMap[m[2]];\n}\nconst weekday = now.weekday;\nconst inDayRange = startDay <= endDay\n  ? (weekday >= startDay && weekday <= endDay)\n  : (weekday >= startDay || weekday <= endDay);\n\nconst [hI, miI] = String(cfg.horario_inicio || '08:00').split(':').map(Number);\nconst [hF, miF] = String(cfg.horario_fin || '18:00').split(':').map(Number);\nconst nowMin = now.hour * 60 + now.minute;\nconst inTimeRange = nowMin >= (hI * 60 + miI) && nowMin <= (hF * 60 + miF);\n\nconst dentroHorario = inDayRange && inTimeRange;\nconst mensaje_final = dentroHorario\n  ? cfg.mensaje_escalamiento_dentro_horario\n  : cfg.mensaje_escalamiento_fuera_horario;\n\nreturn [{ json: { mensaje_final, dentro_horario: dentroHorario } }];"
+      },
+      "id": "f6a7b8c9-0006-4006-8006-000000000006",
+      "name": "Determinar Mensaje por Horario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Clínica').item.json.url_chatwoot }}api/v1/accounts/{{ $('Configuración Clínica').item.json.account_id }}/conversations/{{ $('Entrada de mensaje').item.json.body.conversation.messages[0].conversation_id }}/toggle_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Configuración Clínica').item.json.token_chatwoot }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a7b8c9d0-0007-4007-8007-000000000007",
+      "name": "Cambiar Estado a Pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Clínica').item.json.url_chatwoot }}api/v1/accounts/{{ $('Configuración Clínica').item.json.account_id }}/conversations/{{ $('Entrada de mensaje').item.json.body.conversation.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Configuración Clínica').item.json.token_chatwoot }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=🤖 Escalamiento automático del bot.\nMotivo: {{ $('Validar Salida del Agente').item.json.output.motivo_escalamiento }}\nDetalle: {{ $('Validar Salida del Agente').item.json.output.detalle_escalamiento }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8c9d0e1-0008-4008-8008-000000000008",
+      "name": "Nota Privada de Escalamiento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "pmf-0001",
+              "name": "mensaje_final",
+              "value": "={{ $json.mensaje_final ?? $('Validar Salida del Agente').item.json.output.respuesta }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c9d0e1f2-0009-4009-8009-000000000009",
+      "name": "Preparar Mensaje Final",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-evt-resuelta",
+              "leftValue": "={{ $('Entrada de mensaje').item.json.body.event }}",
+              "rightValue": "conversation_status_changed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "cond-status-resuelta",
+              "leftValue": "={{ $('Entrada de mensaje').item.json.body.status }}",
+              "rightValue": "resolved",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aa01bb02-0011-4011-8011-000000000011",
+      "name": "¿Conversación Resuelta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Clínica').item.json.url_chatwoot }}api/v1/accounts/{{ $('Entrada de mensaje').item.json.body.account.id }}/conversations/{{ $('Entrada de mensaje').item.json.body.id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Configuración Clínica').item.json.token_chatwoot }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('Configuración Clínica').item.json.mensaje_cierre }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb02cc03-0012-4012-8012-000000000012",
+      "name": "Notificar Cierre al Paciente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        336,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_chat_histories_clinica_dulce_maria WHERE session_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Entrada de mensaje').item.json.body.meta.sender.phone_number }}"
+        }
+      },
+      "id": "cc03dd04-0013-4013-8013-000000000013",
+      "name": "Reiniciar Memoria de Sesión",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        336,
+        576
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Escalamiento humano + guardia + aviso de cierre\n\n**Configuración Clínica** (corre tras el webhook): único nodo a editar al clonar por clínica (url/token/account_id, clinic_id, datos, horario, 2 mensajes de escalamiento y mensaje_cierre).\n\n**Ruteo por evento** (If → ¿Conversación Resuelta?):\n- message_created + incoming → flujo de chat.\n- conversation_status_changed + resolved → Notificar Cierre + Reiniciar Memoria de Sesión.\n- resto → No Operation.\n\n**Reiniciar Memoria de Sesión**: al resolver, borra el historial de ese teléfono (session_id) para que la próxima conversación arranque limpia.\n\n⚠️ REQUISITO CHATWOOT: el webhook debe estar suscrito al evento **Conversation Status Changed** (el agent bot solo NO lo envía). Ese payload trae la conversación en la RAÍZ (body.id, body.status, body.account.id, body.meta.sender.phone_number).\n\n**Guardia** (Consultar Estado → ¿Bot Puede Responder?): responde solo si status=open y sin agente asignado (meta.assignee vacío).\n\n**Salida estructurada** (`Validar Salida del Agente`, Code node): el agente responde texto plano y este nodo lo convierte en { respuesta, escalar, motivo_escalamiento, detalle_escalamiento }. ¿Requiere Escalamiento? lee output.escalar: TRUE(salida1)=escalar, FALSE(salida2)=respuesta.\n\n⚠️ NO volver al Structured Output Parser. Falló de forma recurrente con *\"Model output doesn't fit required format\"*, incluso con autoFix ON y su propio modelo conectado. Causa: n8n guarda la respuesta anidada bajo `output` en la memoria de chat, y con contextWindowLength=20 el modelo ve 20 ejemplos envueltos y copia la envoltura; el parser lanza excepción y tumba el turno. Limpiar el historial lo tapaba unos días y volvía. El Code node desenvuelve esas capas en vez de fallar, tolera fences ``` y prosa alrededor, y valida el enum de motivo_escalamiento.\n\n**A prueba de fallos:** si la salida es inentendible, el Code node NO revienta: devuelve escalar=true con motivo `informacion_no_disponible`, así que la conversación pasa a una persona. Antes, un fallo del parser terminaba enviándole al paciente un mensaje con `content: null`.\n\n⚠️ clinic_id duplicado: la rama de ingesta RAG NO ejecuta 'Configuración Clínica'. Al clonar, actualiza clinic_id TAMBIÉN en 'Edit Fields'. La tabla de memoria también es por-clínica.",
+        "height": 736,
+        "width": 1560,
+        "color": 5
+      },
+      "id": "d0e1f2a3-0010-4010-8010-000000000010",
+      "name": "Nota Escalamiento Doc",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        -848
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1664,
+        48
+      ],
+      "id": "43f66826-fe8c-4118-a064-05f717609041",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_chat_histories_clinica_dulce_maria WHERE session_id = '+50660920562';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1440,
+        208
+      ],
+      "id": "10acd98d-b858-4c83-bdcb-c8517f91ff07",
+      "name": "Historial marina borrar",
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_chat_histories_clinica_dulce_maria WHERE session_id = '+50660181661';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1440,
+        368
+      ],
+      "id": "16bdd128-d307-4a6e-a5c7-40dd241ea45c",
+      "name": "Historial jp borrar",
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_chat_histories_clinica_dulce_maria;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1440,
+        48
+      ],
+      "id": "8e411f3a-a1ec-4e20-8d05-cfae0408ab09",
+      "name": "Historial para todos",
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "height": 704,
+        "width": 1056
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1936,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "a1a2b840-fdd7-42b8-9fb2-7e9e7a959acc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Configuración Clínica').item.json.email }}",
+        "subject": "Escalamiento humano - Atención Requerida",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Notificación de Escalamiento - Trignia</title>\n  <style>\n    body { margin: 0; padding: 0; background-color: #FAFAFA; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; color: #555353; -webkit-font-smoothing: antialiased; }\n    table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }\n    td { padding: 0; }\n    img { border: 0; line-height: 100%; outline: none; text-decoration: none; }\n    .wrapper { width: 100%; table-layout: fixed; background-color: #FAFAFA; padding: 40px 0; }\n    .main-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #E9F5F4; }\n    .header { background: linear-gradient(135deg, #0E6B5A 0%, #418C7E 100%); padding: 28px 32px; text-align: left; border-bottom: 3px solid #45AD7F; }\n    .header-logo { font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; margin: 0; display: inline-block; }\n    .header-badge { display: inline-block; float: right; background-color: #FEF2F2; color: #EF4444; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #FCA5A5; }\n    .content { padding: 32px; }\n    .title-section { margin-bottom: 24px; }\n    .title-section h1 { font-size: 20px; color: #0E6B5A; margin: 0 0 6px 0; font-weight: 700; }\n    .title-section p { font-size: 14px; color: #555353; margin: 0; }\n    .info-card { background-color: #E9F5F4; border-radius: 8px; border: 1px solid #A2D4CA; padding: 20px; margin-bottom: 20px; }\n    .info-row { margin-bottom: 12px; }\n    .info-row:last-child { margin-bottom: 0; }\n    .info-label { font-size: 12px; text-transform: uppercase; color: #0E6B5A; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 2px; }\n    .info-value { font-size: 15px; color: #555353; font-weight: 600; }\n    .reason-box { background-color: #E9F5F4; border-left: 4px solid #418C7E; padding: 14px 16px; border-radius: 0 8px 8px 0; margin-bottom: 20px; }\n    .reason-title { font-size: 12px; font-weight: 700; color: #0E6B5A; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }\n    .reason-text { font-size: 15px; color: #555353; font-weight: 600; margin: 0; }\n    .message-box { background-color: #FFFFFF; border: 1px solid #A2D4CA; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02); }\n    .message-label { font-size: 12px; font-weight: 600; color: #0E6B5A; margin-bottom: 6px; }\n    .message-content { font-size: 14px; line-height: 1.5; color: #555353; font-style: italic; margin: 0; }\n    .cta-container { text-align: center; margin: 28px 0 12px 0; }\n    .cta-button { background-color: #418C7E; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(65, 140, 126, 0.25); transition: background-color 0.2s ease; }\n    .footer { background-color: #E9F5F4; border-top: 1px solid #A2D4CA; padding: 20px 32px; text-align: center; font-size: 12px; color: #555353; }\n    .footer p { margin: 4px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"wrapper\">\n    <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">\n      <tr>\n        <td align=\"center\">\n          <div class=\"main-container\">\n            <div class=\"header\">\n              <span class=\"header-logo\">TRIGNIA <span style=\"color: #A2D4CA; font-weight: 400;\">| AI</span></span>\n              <span class=\"header-badge\">Atención Requerida</span>\n            </div>\n            <div class=\"content\">\n              <div class=\"title-section\">\n                <h1>⚠️ Escalamiento Humano Solicitado</h1>\n                <p>Un paciente requiere intervención directa del equipo humano.</p>\n              </div>\n              <div class=\"reason-box\">\n                <div class=\"reason-title\">Motivo del Escalamiento</div>\n                <p class=\"reason-text\">{{ $('Validar Salida del Agente').item.json.output.motivo_escalamiento }}</p>\n              </div>\n              <div class=\"info-card\">\n                <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">\n                  <tr>\n                    <td style=\"padding-bottom: 12px;\">\n                      <div class=\"info-label\">Paciente</div>\n                      <div class=\"info-value\">{{ $('Entrada de mensaje').item.json.body.conversation.messages[0].sender.name }}</div>\n                    </td>\n                    <td style=\"padding-bottom: 12px;\">\n                      <div class=\"info-label\">Teléfono / WhatsApp</div>\n                      <div class=\"info-value\">{{ $('Entrada de mensaje').item.json.body.conversation.messages[0].conversation.contact_inbox.source_id }}</div>\n                    </td>\n                  </tr>\n                  <tr>\n                    <td>\n                      <div class=\"info-label\">Fecha y Hora</div>\n                      <div class=\"info-value\"> fecha y hora </div>\n                    </td>\n                    <td>\n                      <div class=\"info-label\">Canal</div>\n                      <div class=\"info-value\"> whatsapp </div>\n                    </td>\n                  </tr>\n                </table>\n              </div>\n              <div class=\"info-card\" style=\"background-color: #FFFFFF; margin-bottom: 16px;\">\n                <div class=\"info-label\">Detalle del Contexto</div>\n                <div style=\"font-size: 14px; color: #555353; margin-top: 4px; line-height: 1.5;\">\n                  {{ $('Validar Salida del Agente').item.json.output.detalle_escalamiento }}\n                </div>\n              </div>\n              <div class=\"message-box\">\n                <div class=\"message-label\">💬 Último mensaje del paciente:</div>\n                <p class=\"message-content\">\"{{ $('Entrada de mensaje').item.json.body.content }}\"</p>\n              </div>\n              <div class=\"cta-container\">\n                <a href=\"{{ $('Configuración Clínica').item.json.enlace_chatwoot }}\" class=\"cta-button\" target=\"_blank\">\n                  👉 Abrir Conversación en Chatwoot\n                </a>\n              </div>\n            </div>\n            <div class=\"footer\">\n              <p>Este correo fue generado automáticamente por el sistema de IA de <strong>Trignia</strong>.</p>\n              <p>Si la conversación ya fue atendida, puedes ignorar este mensaje.</p>\n            </div>\n          </div>\n        </td>\n      </tr>\n    </table>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        576
+      ],
+      "id": "41ff93ab-8374-441e-967e-a5fb28e982ae",
+      "name": "Send a message",
+      "webhookId": "f51ea719-6336-404c-80cd-1b18f58aeeaa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "JQv3rDJEhLKRGdQ7",
+          "name": "Gmail trignia automations"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_vectors WHERE metadata->>'clinic_id' = 'clinica_dulce_maria';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1440,
+        544
+      ],
+      "id": "978f240b-3717-40b3-895b-3bf750aa7907",
+      "name": "Borrar datos n8n_vectors",
+      "credentials": {
+        "postgres": {
+          "id": "ctiw7NSHBqX5YzqF",
+          "name": "My postgre database"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        192
+      ],
+      "id": "aa11bb22-3344-5566-7788-99aabbccdd01",
+      "name": "Ejecutar: Historial marina"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        368
+      ],
+      "id": "aa11bb22-3344-5566-7788-99aabbccdd02",
+      "name": "Ejecutar: Historial jp"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        544
+      ],
+      "id": "aa11bb22-3344-5566-7788-99aabbccdd03",
+      "name": "Ejecutar: Borrar vectores clínica"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea64b8d0-2057-4c4b-9d39-5b8a7cad4f26",
+              "name": "clinic_id",
+              "value": "clinica_dulce_maria",
+              "type": "string"
+            },
+            {
+              "id": "fb75c9e1-3168-4d5c-ae4a-6c9b8dbe5a37",
+              "name": "folder_id",
+              "value": "1Tfe8bUGgG2yFB4gvo1kM0r-FsOoOuyCQ",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-3333-4c3c-9c3c-3c4d5e6f7a33",
+      "name": "Datos para sync",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        736
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "p92vLPvE7MJZ0OYj",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/p92vLPvE7MJZ0OYj",
+          "cachedResultName": "RAG Sync — Reconciliar Drive ↔ n8n_vectors"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "d4e5f6a7-4444-4d4d-9d4d-4d5e6f7a8b44",
+      "name": "Sincronizar RAG",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        736
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e5f6a7b8-5555-4e5e-9e5e-5e6f7a8b9c55",
+      "name": "Reindexar todo (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "'1Tfe8bUGgG2yFB4gvo1kM0r-FsOoOuyCQ' in parents and trashed = false",
+        "returnAll": true,
+        "filter": {
+          "whatToSearch": "files"
+        },
+        "options": {
+          "fields": [
+            "*"
+          ]
+        }
+      },
+      "id": "f6a7b8c9-6666-4f6f-9f6f-6f7a8b9c0d66",
+      "name": "Listar carpeta RAG",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -640,
+        864
+      ],
+      "retryOnFail": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dv8Iv9ky8MjgX5Cv",
+          "name": "Trignia automations email"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "W8A2NHCABxlNWCph",
+          "mode": "list",
+          "cachedResultName": "CRM Leads — Captura de oportunidades (WhatsApp)",
+          "cachedResultUrl": "/workflow/W8A2NHCABxlNWCph"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('Entrada de mensaje').item.json.body.sender.phone_number }}",
+            "nombre_lead": "={{ $('Entrada de mensaje').item.json.body.sender.name }}",
+            "mensaje_texto": "={{ $('Entrada de mensaje').item.json.body.content }}",
+            "fecha_evento": "={{ (DateTime.fromISO(String($('Entrada de mensaje').item.json.body.created_at || '')).isValid ? DateTime.fromISO(String($('Entrada de mensaje').item.json.body.created_at)) : $now).setZone('America/Costa_Rica').toFormat('yyyy-MM-dd HH:mm') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nombre_lead",
+              "displayName": "nombre_lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_texto",
+              "displayName": "mensaje_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "fecha_evento",
+              "displayName": "fecha_evento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "a68f0111-77ec-442b-b05f-e34e949cbe2b",
+      "name": "CRM - Enviar a captura de leads",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        112
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Captura de leads al CRM\n\n`CRM - Enviar a captura de leads` dispara el sub-workflow **CRM Leads — Captura de oportunidades (WhatsApp)** (`W8A2NHCABxlNWCph`) por cada mensaje entrante.\n\n**Por qué está aquí y no en paralelo:** va **en serie**, justo después del `If` y antes de `Consultar Estado Conversación`. Si fuera una rama paralela y la llamada a Chatwoot fallara, n8n cancelaría la rama pendiente y se perdería el lead.\n\n**Por qué antes de `¿Bot Puede Responder?`:** así el lead también se registra cuando la conversación está en `pending` y ya la tomó un humano.\n\n**No bloquea:** `Wait for Sub-Workflow Completion` apagado + `onError: continueRegularOutput`. Si el CRM falla o tarda, el paciente recibe su respuesta igual.\n\n**Mapeo desde el payload de Chatwoot:**\n- `telefono` ← `body.sender.phone_number`\n- `nombre_lead` ← `body.sender.name`\n- `mensaje_texto` ← `body.content`\n- `fecha_evento` ← `body.created_at` convertido a `America/Costa_Rica` con formato `yyyy-MM-dd HH:mm` (el CRM guarda texto, no ISO)",
+        "height": 340,
+        "width": 560,
+        "color": 5
+      },
+      "id": "479dd116-fa19-4f82-b2cd-1b09c51f91aa",
+      "name": "Nota Captura de Leads",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// El agente ya no usa Structured Output Parser: devuelve texto crudo y acá se valida.\n// Motivo: un parser que lanza excepción tumba el turno completo y termina mandándole\n// un mensaje vacío al paciente. Este nodo NUNCA falla.\n//\n// REGLA DE ORO: un problema de FORMATO no es motivo para escalar a una persona.\n// Si el modelo escribió algo legible para el paciente, se le entrega ESO (rescate).\n// Solo se escala de verdad cuando el modelo falló, cuando él mismo lo pidió, o cuando\n// no hay absolutamente ningún texto que enviarle al paciente.\n\nconst MOTIVOS = ['ninguno', 'solicitud_paciente', 'informacion_no_disponible', 'tema_clinico_sensible', 'frustracion'];\n\nconst entrada = $input.first().json;\n\nconst crudaTexto = typeof entrada.output === 'string'\n  ? entrada.output\n  : JSON.stringify(entrada.output ?? null);\n\n// Saca el valor de \"respuesta\" de un JSON roto, sin parsearlo.\nfunction extraerRespuestaSuelta(texto) {\n  const m = String(texto).match(/\"respuesta\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"/);\n  if (!m) return '';\n  try {\n    return JSON.parse('\"' + m[1] + '\"').trim();\n  } catch (e) {\n    return m[1].replace(/\\\\n/g, '\\n').replace(/\\\\\"/g, '\"').trim();\n  }\n}\n\n// Escalamiento real: no hay nada que responderle al paciente.\nconst fallback = (detalle) => [{\n  json: {\n    output: {\n      respuesta: 'Permítame un momento, le comunico con una persona de nuestro equipo.',\n      escalar: true,\n      motivo_escalamiento: 'informacion_no_disponible',\n      detalle_escalamiento: detalle,\n    },\n    parse_ok: false,\n    rescatado: false,\n    motivo_fallo: detalle,\n    salida_cruda: String(crudaTexto).slice(0, 500),\n  },\n  pairedItem: { item: 0 },\n}];\n\n// Rescate: el modelo no respetó el formato, pero sí escribió una respuesta usable.\n// Se le entrega al paciente en vez de escalarlo por un problema de formato.\nconst rescate = (texto, motivo_fallo) => [{\n  json: {\n    output: {\n      respuesta: String(texto).trim(),\n      escalar: false,\n      motivo_escalamiento: 'ninguno',\n      detalle_escalamiento: '',\n    },\n    parse_ok: false,\n    rescatado: true,\n    motivo_fallo,\n    salida_cruda: String(crudaTexto).slice(0, 500),\n  },\n  pairedItem: { item: 0 },\n}];\n\n// El agente tiene onError: continueRegularOutput, así que un fallo del modelo llega como {error}.\nif (entrada.error) {\n  return fallback(`El modelo falló: ${entrada.error}`);\n}\n\n// La salida puede venir como string (lo normal sin parser) o como objeto ya estructurado.\nlet datos = entrada.output;\n\nif (typeof datos === 'string') {\n  let texto = datos.trim();\n  // Quita bloques de código: ```json ... ```\n  texto = texto.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '').trim();\n\n  const ini = texto.indexOf('{');\n  const fin = texto.lastIndexOf('}');\n  // Un JSON truncado (se cortó por max tokens) no tiene \"}\" pero tampoco es prosa:\n  // mandárselo crudo al paciente sería peor que escalar.\n  const intentoJson = texto.startsWith('{') || /\"respuesta\"\\s*:/.test(texto);\n\n  if (ini === -1 || fin <= ini) {\n    if (intentoJson) {\n      const suelta = extraerRespuestaSuelta(texto);\n      if (suelta) return rescate(suelta, 'JSON truncado o sin cerrar; se rescató \"respuesta\".');\n      return fallback('El modelo devolvió un JSON truncado e ilegible.');\n    }\n    // Prosa limpia: es la respuesta del modelo, solo que sin la envoltura JSON.\n    if (texto) return rescate(texto, 'El modelo respondió en texto plano, sin JSON.');\n    return fallback('El modelo devolvió una salida vacía.');\n  }\n\n  const bloque = texto.slice(ini, fin + 1);\n  try {\n    datos = JSON.parse(bloque);\n  } catch (e) {\n    const motivo = `JSON inválido del modelo: ${e.message}`;\n    const suelta = extraerRespuestaSuelta(bloque);\n    if (suelta) return rescate(suelta, motivo);\n    // JSON roto y sin campo rescatable: si había prosa fuera del bloque, se usa esa.\n    const prosa = (texto.slice(0, ini) + ' ' + texto.slice(fin + 1)).trim();\n    if (prosa) return rescate(prosa, motivo);\n    return fallback(motivo);\n  }\n}\n\nif (!datos || typeof datos !== 'object') {\n  const suelta = String(crudaTexto).trim();\n  if (suelta) return rescate(suelta, 'La salida del modelo no era un objeto.');\n  return fallback('La salida del modelo no era un objeto.');\n}\n\n// Contaminación conocida del historial: n8n guarda la respuesta anidada bajo \"output\" en la\n// memoria de chat, y el modelo imita esa envoltura en turnos siguientes. En vez de fallar\n// por eso (la causa histórica de \"Model output doesn't fit required format\"), se desenvuelve.\nlet capas = 0;\nwhile (datos && typeof datos === 'object' && !('respuesta' in datos) && datos.output && capas < 5) {\n  datos = datos.output;\n  capas += 1;\n}\n\nconst respuesta = typeof datos.respuesta === 'string' ? datos.respuesta.trim() : '';\nif (!respuesta) {\n  const suelta = extraerRespuestaSuelta(crudaTexto);\n  if (suelta) return rescate(suelta, 'El JSON no traía \"respuesta\" en la raíz.');\n  return fallback('El modelo no devolvió el campo \"respuesta\".');\n}\n\nconst escalar = datos.escalar === true || String(datos.escalar).trim().toLowerCase() === 'true';\nconst motivo = MOTIVOS.includes(datos.motivo_escalamiento)\n  ? datos.motivo_escalamiento\n  : (escalar ? 'informacion_no_disponible' : 'ninguno');\nconst detalle = typeof datos.detalle_escalamiento === 'string' ? datos.detalle_escalamiento : '';\n\nreturn [{\n  json: {\n    output: {\n      respuesta,\n      escalar,\n      motivo_escalamiento: motivo,\n      detalle_escalamiento: escalar ? (detalle || respuesta.slice(0, 140)) : '',\n    },\n    parse_ok: true,\n    rescatado: false,\n    capas_desenvueltas: capas,\n  },\n  pairedItem: { item: 0 },\n}];\n"
+      },
+      "id": "a936eaa1-7d18-4944-95b9-479b2cbfd958",
+      "name": "Validar Salida del Agente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Servicios",
+          "cachedResultName": "Servicios"
+        },
+        "options": {}
+      },
+      "id": "c0a71a90-5e3f-4b21-9d64-7f1e2c8b4a01",
+      "name": "catalogo_servicios",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        784,
+        320
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Dice qué espacios tiene libres la clínica para un servicio.\nDevuelve: interpretacion (cómo entendió lo que pidió el paciente, repetíselo para confirmar),\ndisponible (true/false), alternativas (lista de horarios concretos con fecha, hora y profesional)\ny mensaje (redactado, parafrasealo).\nÚsala SIEMPRE antes de proponerle un horario a alguien. Nunca inventes horarios ni los copies\nde un mensaje anterior de la conversación: los espacios se ocupan.",
+        "workflowId": {
+          "__rl": true,
+          "value": "LsbRqfF2c32hVahw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/LsbRqfF2c32hVahw",
+          "cachedResultName": "Agenda — disponibilidad y citas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "consultar_disponibilidad",
+            "id_servicio": "={{ $fromAI('id_servicio', \"El id del servicio en formato SRV-XXX, sacado de catalogo_servicios. Si no sabés cuál es, llamá primero a catalogo_servicios.\", 'string') }}",
+            "fecha_texto": "={{ $fromAI('fecha_texto', \"LAS PALABRAS DEL PACIENTE sobre cuándo quiere la cita, copiadas tal cual y sin traducir: \\\"el martes en la tarde\\\", \\\"la próxima semana\\\", \\\"mañana temprano\\\", \\\"dale, el de las 3\\\". NUNCA pongas una fecha calculada por vos como \\\"2026-08-11\\\": la herramienta sabe qué día es hoy y la resuelve sola. Si el paciente no dijo cuándo, dejalo vacío.\", 'string') }}",
+            "telefono": "={{ $('Entrada de mensaje').first().json.body.sender.phone_number }}",
+            "nombre_paciente": "={{ $('Entrada de mensaje').first().json.body.sender.name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_servicio",
+              "displayName": "id_servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "fecha_texto",
+              "displayName": "fecha_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-consultar_disponibilidad",
+      "name": "consultar_disponibilidad",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        368
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Reserva uno de los espacios que devolvió consultar_disponibilidad.\nEn fecha_texto poné el día Y la hora que el paciente confirmó, con sus palabras\n(\"el martes 11 a las 3 de la tarde\"). Si solo mandás la hora sin el día y hay varios días\ncon esa hora, devuelve motivo \"ambiguo\" y tenés que repreguntar.\nLa cita queda como SOLICITADA: la clínica la confirma por WhatsApp 24 horas antes.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "LsbRqfF2c32hVahw",
+          "cachedResultName": "Agenda — disponibilidad y citas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "agendar",
+            "id_servicio": "={{ $fromAI('id_servicio', \"El id del servicio en formato SRV-XXX, sacado de catalogo_servicios. Si no sabés cuál es, llamá primero a catalogo_servicios.\", 'string') }}",
+            "fecha_texto": "={{ $fromAI('fecha_texto', \"LAS PALABRAS DEL PACIENTE sobre cuándo quiere la cita, copiadas tal cual y sin traducir: \\\"el martes en la tarde\\\", \\\"la próxima semana\\\", \\\"mañana temprano\\\", \\\"dale, el de las 3\\\". NUNCA pongas una fecha calculada por vos como \\\"2026-08-11\\\": la herramienta sabe qué día es hoy y la resuelve sola. Si el paciente no dijo cuándo, dejalo vacío.\", 'string') }}",
+            "telefono": "={{ $('Entrada de mensaje').first().json.body.sender.phone_number }}",
+            "nombre_paciente": "={{ $('Entrada de mensaje').first().json.body.sender.name }}",
+            "email": "={{ $fromAI('email', \"El correo electrónico del paciente, tal como lo escribió. Dejalo vacío si no lo dio o no lo quiso dar: la cita se agenda igual.\", 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_servicio",
+              "displayName": "id_servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "fecha_texto",
+              "displayName": "fecha_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-agendar",
+      "name": "agendar_cita",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        272
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Confirma la asistencia a una cita que el paciente ya tiene agendada.\nUsala cuando diga que sí va a ir (\"confirmo\", \"ahí estaré\", \"sí voy\").\nNO le pidas cuál cita ni un número de cita: la herramienta la encuentra por su teléfono.\nSi devuelve motivo \"ambiguo\" es que tiene varias; repreguntá con la lista que trae.\nSi devuelve \"sin_citas\", ofrecele agendar una.",
+        "workflowId": {
+          "__rl": true,
+          "value": "LsbRqfF2c32hVahw",
+          "mode": "list",
+          "cachedResultName": "Agenda — disponibilidad y citas",
+          "cachedResultUrl": "/workflow/LsbRqfF2c32hVahw"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "confirmar",
+            "fecha_texto": "={{ $fromAI('fecha_texto', \"LAS PALABRAS DEL PACIENTE sobre DE CUÁL de sus citas habla, copiadas tal cual: \\\"la del jueves\\\", \\\"la de mañana\\\". Dejalo vacío si no dijo cuál o si solo tiene una: la herramienta la encuentra sola por su teléfono. NUNCA pongas una fecha calculada por vos.\", 'string') }}",
+            "telefono": "={{ $('Entrada de mensaje').first().json.body.sender.phone_number }}",
+            "nombre_paciente": "={{ $('Entrada de mensaje').first().json.body.sender.name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "fecha_texto",
+              "displayName": "fecha_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-confirmar",
+      "name": "confirmar_cita",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        368
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Cancela una cita que el paciente ya tiene agendada.\nANTES de llamarla avisale que si faltan menos de 24 horas aplica un cargo de 10.000 colones,\ny llamala igual si aun así quiere cancelar: la clínica prefiere saberlo a perder el espacio.\nNO le pidas cuál cita ni un número de cita: la herramienta la encuentra por su teléfono.\nSi devuelve motivo \"ambiguo\" es que tiene varias; repreguntá con la lista que trae.",
+        "workflowId": {
+          "__rl": true,
+          "value": "LsbRqfF2c32hVahw",
+          "mode": "list",
+          "cachedResultName": "Agenda — disponibilidad y citas",
+          "cachedResultUrl": "/workflow/LsbRqfF2c32hVahw"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "cancelar",
+            "fecha_texto": "={{ $fromAI('fecha_texto', \"LAS PALABRAS DEL PACIENTE sobre DE CUÁL de sus citas habla, copiadas tal cual: \\\"la del jueves\\\", \\\"la de mañana\\\". Dejalo vacío si no dijo cuál o si solo tiene una: la herramienta la encuentra sola por su teléfono. NUNCA pongas una fecha calculada por vos.\", 'string') }}",
+            "telefono": "={{ $('Entrada de mensaje').first().json.body.sender.phone_number }}",
+            "nombre_paciente": "={{ $('Entrada de mensaje').first().json.body.sender.name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "fecha_texto",
+              "displayName": "fecha_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-cancelar",
+      "name": "cancelar_cita",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        272
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Mueve una cita que el paciente ya tiene a otro día u hora. Es UNA sola llamada: no\ncanceles y vuelvas a agendar.\nEn fecha_texto va PARA CUÁNDO la quiere, con día Y hora, en las palabras del paciente.\nConsultá disponibilidad antes si no sabés qué espacios hay.\nSi devuelve \"ambiguo\" puede ser que tenga varias citas o que ese día haya varios espacios:\nmirá el mensaje y repreguntá con lo que trae.\nLa cita queda como REPROGRAMADA y la clínica la confirma 24 horas antes.",
+        "workflowId": {
+          "__rl": true,
+          "value": "LsbRqfF2c32hVahw",
+          "mode": "list",
+          "cachedResultName": "Agenda — disponibilidad y citas",
+          "cachedResultUrl": "/workflow/LsbRqfF2c32hVahw"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "reagendar",
+            "fecha_texto": "={{ $fromAI('fecha_texto', \"LAS PALABRAS DEL PACIENTE sobre PARA CUÁNDO quiere mover la cita, con día Y hora, copiadas tal cual: \\\"el viernes a las 3 de la tarde\\\". Si el paciente solo confirmó un espacio que vos le propusiste (\\\"sí\\\", \\\"dale\\\"), escribí acá ese espacio completo con día y hora. NUNCA pongas una fecha calculada por vos.\", 'string') }}",
+            "telefono": "={{ $('Entrada de mensaje').first().json.body.sender.phone_number }}",
+            "nombre_paciente": "={{ $('Entrada de mensaje').first().json.body.sender.name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "fecha_texto",
+              "displayName": "fecha_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-reagendar",
+      "name": "reagendar_cita",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        368
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archivo creado": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archivo actualizado": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DOC",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CSV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EXCEL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MD",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF": {
+      "main": [
+        [
+          {
+            "node": "Normalizar a Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DOC": {
+      "main": [
+        [
+          {
+            "node": "Normalizar a Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CSV": {
+      "main": [
+        [
+          {
+            "node": "Normalizar a Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EXCEL": {
+      "main": [
+        [
+          {
+            "node": "Normalizar a Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MD": {
+      "main": [
+        [
+          {
+            "node": "Normalizar a Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar a Markdown": {
+      "main": [
+        [
+          {
+            "node": "Delete table or rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete table or rows": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "base_de_datos",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Datos para sync",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada de mensaje": {
+      "main": [
+        [
+          {
+            "node": "Configuración Clínica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración Clínica": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "CRM - Enviar a captura de leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Conversación Resuelta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Estado Conversación": {
+      "main": [
+        [
+          {
+            "node": "¿Bot Puede Responder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Bot Puede Responder?": {
+      "main": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Conversación Resuelta?": {
+      "main": [
+        [
+          {
+            "node": "Notificar Cierre al Paciente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reiniciar Memoria de Sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "base_de_datos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n_chat_histories_clinica_dulce_maria": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Requiere Escalamiento?": {
+      "main": [
+        [
+          {
+            "node": "Determinar Mensaje por Horario",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cambiar Estado a Pending",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Nota Privada de Escalamiento",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determinar Mensaje por Horario": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensaje Final": {
+      "main": [
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Historial para todos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar: Historial marina": {
+      "main": [
+        [
+          {
+            "node": "Historial marina borrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar: Historial jp": {
+      "main": [
+        [
+          {
+            "node": "Historial jp borrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar: Borrar vectores clínica": {
+      "main": [
+        [
+          {
+            "node": "Borrar datos n8n_vectors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos para sync": {
+      "main": [
+        [
+          {
+            "node": "Sincronizar RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reindexar todo (manual)": {
+      "main": [
+        [
+          {
+            "node": "Listar carpeta RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar carpeta RAG": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Enviar a captura de leads": {
+      "main": [
+        [
+          {
+            "node": "Consultar Estado Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de clínica": {
+      "main": [
+        [
+          {
+            "node": "Validar Salida del Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Salida del Agente": {
+      "main": [
+        [
+          {
+            "node": "¿Requiere Escalamiento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "catalogo_servicios": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_disponibilidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confirmar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cancelar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reagendar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de clínica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

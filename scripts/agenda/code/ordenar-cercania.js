@@ -3,9 +3,11 @@
 // es exactamente lo que hace alucinar al modelo.
 const TZ = 'America/Costa_Rica';
 const MAX_ALTERNATIVAS = 6;
+const VALORACIONES = ['SRV-001', 'SRV-016'];
 
 const motor = $input.first().json;
 const pedido = $('Interpretar la fecha').first().json;
+const loc = $('Localizar cita').first().json;
 
 const aMin = (hhmm) => {
   const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})/);
@@ -107,6 +109,71 @@ if (!alternativas.length) {
     + `${alternativas.slice(0, 3).map((a) => a.texto).join('; ')}.`;
 }
 
+// ---------- aviso: la regla de valoración, dicha por quien la conoce ----------
+// Consultar NO bloquea —informa—, pero tiene que decir la verdad sobre la regla. Si calla,
+// el modelo la deduce de la columna `requiere_valoracion` del SERVICIO y afirma cosas
+// sobre el PACIENTE: el 2026-08-28 (exec 27517) contestó "la limpieza no requiere
+// valoración previa" a alguien que preguntaba por la regla de la clínica, y le habría
+// contestado igual a un paciente nuevo, al que "agendar" después rebota.
+//
+// Solo se emite cuando cambia lo que el paciente puede hacer. Para el resto de los casos
+// viajan los hechos crudos (`paciente_existente`, `valoracion`) y la regla vive en el
+// prompt: la política es estable, el estado del paciente no.
+const val = loc.valoracion || { estado: 'ninguna', texto: '' };
+const proximas = loc.citas_proximas || [];
+const esValoracion = VALORACIONES.includes(motor.id_servicio);
+const yaValorado = val.estado === 'realizada';
+const reglaA = loc.paciente_existente !== true;      // primera visita a la clínica
+const reglaB = motor.requiere_valoracion === true;   // el servicio la exige
+
+let avisoRegla = '';
+if (esValoracion) {
+  avisoRegla = '';
+} else if (!yaValorado && reglaA) {
+  avisoRegla = val.estado === 'agendada'
+    ? `Es su primera visita, así que la clínica pide una valoración inicial antes de ${motor.servicio}. `
+      + `Ya tiene la suya agendada para ${val.texto}, y el tratamiento va después de esa.`
+    : `Es su primera visita, así que la clínica pide una valoración inicial antes de ${motor.servicio} `
+      + '(30 minutos, 15.000 colones, con examen completo, plan por escrito y radiografías).';
+} else if (!yaValorado && reglaB) {
+  avisoRegla = val.estado === 'agendada'
+    ? `${motor.servicio} requiere una valoración previa y usted ya tiene la suya agendada para `
+      + `${val.texto}. El tratamiento se agenda después de esa.`
+    : `${motor.servicio} requiere una valoración previa (30 minutos, 15.000 colones) antes de reservarlo.`;
+} else if (yaValorado && reglaB) {
+  avisoRegla = `${motor.servicio} requiere valoración previa, y usted ya la tiene hecha `
+    + `(${val.texto}), así que se lo puedo agendar directamente.`;
+}
+
+// `nota_valoracion` va SIEMPRE, incluso cuando ninguna regla está activa. Es el hecho ya
+// redactado, listo para cuando el paciente pregunte "¿puedo agendar sin valoración?".
+// `aviso` es lo que hay que decir sin que lo pidan; esto es lo que hay que decir cuando
+// lo piden. Sin este campo el modelo contestaba esa pregunta desde la columna
+// `requiere_valoracion` del catálogo y se equivocaba de sujeto: hablaba del servicio
+// cuando le preguntaban por la persona (2026-08-28, execs 27517 y 27565).
+let notaValoracion;
+if (esValoracion) {
+  notaValoracion = 'Esta es justamente la cita de valoración inicial.';
+} else if (reglaA) {
+  notaValoracion = 'La clínica pide una valoración inicial en la primera visita, y esta es '
+    + `la suya, así que ${motor.servicio} va después de esa.`;
+} else if (reglaB && !yaValorado) {
+  notaValoracion = `${motor.servicio} requiere una valoración previa y usted todavía no la tiene`
+    + `${val.estado === 'agendada' ? `, aunque ya la tiene agendada para ${val.texto}` : ' hecha'}.`;
+} else if (reglaB && yaValorado) {
+  notaValoracion = `${motor.servicio} requiere una valoración previa y usted ya la tiene hecha `
+    + `(${val.texto}), así que no le hace falta otra.`;
+} else {
+  notaValoracion = 'La clínica pide la valoración inicial solo en la primera visita. Usted ya '
+    + `está registrado con nosotros, así que para ${motor.servicio} no le hace falta.`;
+}
+
+// Cada vez que el paciente va a agendar se le recuerdan las citas que ya tiene.
+const recordatorio = proximas.length
+  ? `Ya tiene ${proximas.length === 1 ? 'una cita agendada' : `${proximas.length} citas agendadas`}: `
+    + `${proximas.map((c) => `${c.servicio}, ${c.texto}`).join('; ')}.`
+  : '';
+
 return [{
   json: {
     ok: true,
@@ -119,5 +186,11 @@ return [{
     motivo: motor.motivo,
     alternativas,
     mensaje,
+    // contexto del paciente: los hechos, para que el modelo no los deduzca
+    paciente_existente: loc.paciente_existente === true,
+    valoracion: val,
+    citas_proximas: proximas,
+    aviso: [avisoRegla, recordatorio].filter(Boolean).join(' '),
+    nota_valoracion: notaValoracion,
   },
 }];

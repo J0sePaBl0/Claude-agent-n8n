@@ -1,0 +1,5 @@
+=Mensaje recibido por WhatsApp de un contacto del gimnasio:
+"{{ $json.mensaje_texto }}"
+
+Catálogo de servicios disponibles (formato "id_servicio: nombre"):
+{{ $json.catalogo_servicios }}

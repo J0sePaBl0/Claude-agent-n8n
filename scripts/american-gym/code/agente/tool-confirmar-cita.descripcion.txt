@@ -1,0 +1,5 @@
+Confirma la asistencia a una cita que el cliente ya tiene agendada.
+Usala cuando diga que sí va a ir ("confirmo", "ahí estaré", "sí voy").
+NO le pidas cuál cita ni un número de cita: la herramienta la encuentra por su teléfono.
+Si devuelve motivo "ambiguo" es que tiene varias; repreguntá con la lista que trae.
+Si devuelve "sin_citas", ofrecele agendar una.

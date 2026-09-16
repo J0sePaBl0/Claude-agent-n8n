@@ -5,7 +5,12 @@
 //
 //   { actualizaciones[], borrar_evento, crear_evento, actividad, respuesta }
 const TZ = 'America/Costa_Rica';
-const CARGO = 10000;
+// Política de cancelación del gimnasio. `CARGO = null` significa que no hay cargo: la cita se
+// cancela y listo, sin mencionar montos. En Dulce María era 10.000 colones con menos de 24 h.
+// PENDIENTE (info de American Gym): monto y horas de aviso reales.
+const CARGO = null;
+const HORAS_AVISO = 24;
+const montoCargo = () => `${CARGO.toLocaleString('es-CR')} colones`;
 
 const loc = $('Localizar cita').first().json;
 const entrada = $('Normalizar entrada').first().json;
@@ -16,12 +21,12 @@ const sello = ahora.toFormat('yyyy-MM-dd HH:mm');
 const notaPrevia = String(c.notas || '').trim();
 
 // Datos para el correo de aviso. La sede sale de Config, que ya se leyó en "Preparar
-// datos": el sub-workflow de correos no vuelve a tocar Sheets. El correo del paciente
+// datos": el sub-workflow de correos no vuelve a tocar Sheets. El correo del cliente
 // sale de su ficha; si está vacío, el sub-workflow corta solo y la gestión igual se hizo.
 const sede = ($('Preparar datos').first().json.config || [])[0] || {};
 const correoBase = {
-  email: String((loc.paciente || {}).email || '').trim(),
-  nombre_paciente: String((loc.paciente || {}).nombre_completo || '').trim(),
+  email: String((loc.cliente || {}).email || '').trim(),
+  nombre_cliente: String((loc.cliente || {}).nombre_completo || '').trim(),
   servicio: c.servicio,
   id_cita: c.id_cita,
   nota: '',
@@ -41,50 +46,46 @@ const base = {
   cargo_por_cancelacion_tardia: false,
   // `tipo` vacío = no se manda correo. Es el caso de confirmar: por decisión del
   // proyecto la confirmación vive ÚNICAMENTE en WhatsApp y no genera correo.
-  correo: { ...correoBase, tipo: '', texto_cita: c.texto, profesional: c.profesional },
+  correo: { ...correoBase, tipo: '', texto_cita: c.texto, entrenador: c.entrenador },
 };
 const citaPublica = (t, s) => ({
   texto: t, fecha: s.fecha, hora_inicio: s.hora_inicio, hora_fin: s.hora_fin,
-  id_profesional: s.id_profesional, profesional: s.profesional,
+  id_entrenador: s.id_entrenador, entrenador: s.entrenador,
 });
 
 // ---------------------------------------------------------------- confirmar
 if (loc.accion === 'confirmar') {
   return [{ json: { ...base, accion: 'confirmar',
-    // K = estado, N = confirmada_por_paciente
+    // K = estado, N = confirmada_por_cliente
     actualizaciones: [
       { range: `Citas!K${f}`, values: [['Confirmada']] },
       { range: `Citas!N${f}`, values: [['TRUE']] },
     ],
     actividad: {
       tipo: 'Confirmación',
-      resumen: `El paciente confirmó su cita de ${c.servicio} del ${c.fecha} a las ${c.hora_inicio}`,
+      resumen: `El cliente confirmó su cita de ${c.servicio} del ${c.fecha} a las ${c.hora_inicio}`,
       intencion: 'Agendar',
     },
     respuesta: {
       ok: true, motivo: null, disponible: true, agendada: false,
       servicio: c.servicio, id_cita: c.id_cita,
       cita: citaPublica(c.texto, c),
-      mensaje: `Listo, su cita de ${c.servicio} quedó confirmada para ${c.texto} con ${c.profesional}. `
-        + 'Le esperamos. Si necesita moverla, avísenos con al menos 24 horas de anticipación.',
+      mensaje: `Listo, su cita de ${c.servicio} quedó confirmada para ${c.texto} con ${c.entrenador}. `
+        + `Le esperamos. Si necesita moverla, avísenos con al menos ${HORAS_AVISO} horas de anticipación.`,
     },
   } }];
 }
 
 // ---------------------------------------------------------------- cancelar
-// DM_04, textual: "Las citas se pueden cancelar o reprogramar sin costo hasta veinticuatro
-// horas antes de la hora agendada. Las cancelaciones con menos de veinticuatro horas de
-// aviso generan un cargo de 10.000 colones, que se cobra en la siguiente cita."
-//
-// La cita se cancela IGUAL aunque falten menos de 24 h: negarse sería peor que el cargo,
-// porque el paciente no va a ir de todos modos y la clínica pierde el espacio sin saberlo.
-// Acá solo se informa. No se cobra nada ni se lleva la cuenta de las tres ausencias.
+// La cita se cancela IGUAL aunque el aviso llegue tarde: negarse sería peor que el cargo,
+// porque el cliente no va a ir de todos modos y el gimnasio pierde el espacio sin saberlo.
+// Acá solo se informa. No se cobra nada.
 if (loc.accion === 'cancelar') {
   const horas = DateTime.fromISO(`${c.fecha}T${c.hora_inicio}`, { zone: TZ })
     .diff(ahora, 'hours').hours;
-  const tardia = horas < 24;
-  const nota = `${notaPrevia} | Cancelada por el paciente el ${sello}`
-    + (tardia ? ` (menos de 24 h: cargo de ${CARGO.toLocaleString('es-CR')} colones)` : ' (sin cargo)');
+  const tardia = CARGO !== null && horas < HORAS_AVISO;
+  const nota = `${notaPrevia} | Cancelada por el cliente el ${sello}`
+    + (tardia ? ` (menos de ${HORAS_AVISO} h: cargo de ${montoCargo()})` : ' (sin cargo)');
 
   return [{ json: { ...base, accion: 'cancelar',
     cargo_por_cancelacion_tardia: tardia,
@@ -92,10 +93,10 @@ if (loc.accion === 'cancelar') {
       ...correoBase,
       tipo: 'cancelada',
       texto_cita: c.texto,
-      profesional: c.profesional,
+      entrenador: c.entrenador,
       nota: tardia
-        ? `Como faltaban menos de 24 horas para la cita, aplica el cargo de `
-          + `${CARGO.toLocaleString('es-CR')} colones que la clínica cobra en su siguiente visita.`
+        ? `Como faltaban menos de ${HORAS_AVISO} horas para la cita, aplica el cargo de `
+          + `${montoCargo()} que el gimnasio cobra en su siguiente visita.`
         : '',
     },
     actualizaciones: [
@@ -106,7 +107,7 @@ if (loc.accion === 'cancelar') {
       ? { id: c.id_evento_calendar, calendar: c.id_calendar } : null,
     actividad: {
       tipo: 'Seguimiento',
-      resumen: `Cita ${c.id_cita} cancelada por el paciente${tardia ? ' con menos de 24 h de aviso' : ''}`,
+      resumen: `Cita ${c.id_cita} cancelada por el cliente${tardia ? ` con menos de ${HORAS_AVISO} h de aviso` : ''}`,
       intencion: 'Reprogramar',
     },
     respuesta: {
@@ -115,8 +116,8 @@ if (loc.accion === 'cancelar') {
       cita: citaPublica(c.texto, c),
       mensaje: `Cancelé su cita de ${c.servicio} del ${c.texto}.`
         + (tardia
-          ? ` Como faltaban menos de 24 horas, aplica el cargo de ${CARGO.toLocaleString('es-CR')} `
-            + 'colones que la clínica cobra en la siguiente cita.'
+          ? ` Como faltaban menos de ${HORAS_AVISO} horas, aplica el cargo de ${montoCargo()} `
+            + 'que el gimnasio cobra en la siguiente cita.'
           : ' No tiene ningún cargo.')
         + ' Cuando quiera volver a agendar, con gusto le busco un espacio.',
     },
@@ -128,12 +129,12 @@ if (loc.accion === 'cancelar') {
 // correo siguen sirviendo, y el histórico queda en `notas` y en Actividades. `Reprogramada`
 // ya existe en los enums de Config!R, no hubo que inventar un estado.
 //
-// El evento de Calendar se borra y se recrea en vez de moverse: si cambió el profesional
+// El evento de Calendar se borra y se recrea en vez de moverse: si cambió el entrenador
 // cambió el calendario, y mover un evento entre calendarios no es un PATCH.
 const resuelto = $input.first().json;    // viene de "Resolver slot pedido"
 const s = resuelto.slot;
-const prof = $('Preparar datos').first().json.profesionales
-  .find((p) => String(p.id_profesional || '').trim() === s.id_profesional);
+const prof = $('Preparar datos').first().json.entrenadores
+  .find((p) => String(p.id_entrenador || '').trim() === s.id_entrenador);
 const calNuevo = prof ? String(prof.id_calendar || '').trim() : '';
 
 return [{ json: { ...base, accion: 'reagendar',
@@ -141,11 +142,11 @@ return [{ json: { ...base, accion: 'reagendar',
     ...correoBase,
     tipo: 'reprogramada',
     texto_cita: resuelto.slot_texto,
-    profesional: s.profesional,
+    entrenador: s.entrenador,
     texto_anterior: c.texto,
   },
   actualizaciones: [
-    { range: `Citas!C${f}`, values: [[s.id_profesional]] },
+    { range: `Citas!C${f}`, values: [[s.id_entrenador]] },
     // H fecha, I hora_inicio, J hora_fin, K estado: contiguas, una sola escritura
     { range: `Citas!H${f}:K${f}`, values: [[s.fecha, s.hora_inicio, s.hora_fin, 'Reprogramada']] },
     // vuelve a requerir confirmación y a entrar en el recordatorio del día anterior
@@ -159,8 +160,8 @@ return [{ json: { ...base, accion: 'reagendar',
     // Costa Rica es UTC-6 todo el año, sin horario de verano: el offset va explícito
     inicio_iso: `${s.fecha}T${s.hora_inicio}:00-06:00`,
     fin_iso: `${s.fecha}T${s.hora_fin}:00-06:00`,
-    summary: `${c.servicio} — ${loc.paciente ? loc.paciente.nombre_completo : ''}`.trim(),
-    description: `id_cita: ${c.id_cita}\nid_paciente: ${c.id_paciente}\n`
+    summary: `${c.servicio} — ${loc.cliente ? loc.cliente.nombre_completo : ''}`.trim(),
+    description: `id_cita: ${c.id_cita}\nid_cliente: ${c.id_cliente}\n`
       + `Reprogramada desde ${c.fecha} ${c.hora_inicio}`,
   } : null,
   actividad: {
@@ -173,6 +174,6 @@ return [{ json: { ...base, accion: 'reagendar',
     servicio: c.servicio, id_cita: c.id_cita,
     cita: citaPublica(resuelto.slot_texto, s),
     mensaje: `Listo, moví su cita de ${c.servicio}: queda para ${resuelto.slot_texto}. `
-      + 'Queda como reprogramada y la clínica se la confirma 24 horas antes.',
+      + 'Queda como reprogramada y el gimnasio se la confirma 24 horas antes.',
   },
 } }];

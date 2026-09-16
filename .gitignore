@@ -1,1 +1,3 @@
 .mcp.json
+# Tiene la API key de n8n en texto plano dentro de las reglas de permisos.
+.claude/settings.local.json

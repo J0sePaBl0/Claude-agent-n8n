@@ -1,0 +1,7 @@
+Base de conocimiento oficial del gimnasio.
+
+Contiene horarios, clases grupales, instalaciones, reglamento, políticas (inscripción, congelamiento, cancelación, reembolsos), formas de pago, recomendaciones de salud y seguridad, ubicación y preguntas frecuentes.
+
+NO contiene precios: los precios salen únicamente de catalogo_servicios.
+
+Debes usar esta herramienta para responder cualquier pregunta sobre el gimnasio que no sea de precios o servicios.

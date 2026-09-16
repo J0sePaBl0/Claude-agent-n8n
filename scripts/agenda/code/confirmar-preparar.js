@@ -74,6 +74,16 @@ const idPaciente = datos.id_paciente || siguiente(pacientes.map((p) => p.id_paci
 const idActividad = siguiente(actividades.map((a) => a.id_actividad), 'ACT-', 5);
 const ahora = DateTime.now().setZone(TZ);
 
+// El correo del paciente para el aviso de la cita. Gana el que acaba de dar por WhatsApp
+// sobre el que ya estaba en la hoja: si lo dictó de nuevo es porque el viejo no servía.
+// Puede quedar vacío y no pasa nada: el correo es un aviso, nunca un requisito para
+// agendar. `Fila paciente` lo escribe en Pacientes!D para las próximas veces.
+const emailPaciente = txt(entrada.email) || txt((datos.paciente_row || {}).email);
+
+// Datos de la sede para el correo. Salen de Config, que ya se leyó en "Preparar datos":
+// el workflow de correos no vuelve a tocar Sheets.
+const sede = (tablas.config || [])[0] || {};
+
 return [{
   json: {
     ...datos,
@@ -89,5 +99,13 @@ return [{
     fin_iso: `${slot.fecha}T${slot.hora_fin}:00-06:00`,
     fecha_creacion: ahora.toFormat('yyyy-MM-dd HH:mm'),
     nombre_paciente: datos.nombre_paciente || txt(entrada.nombre_paciente) || 'Paciente WhatsApp',
+    email_paciente: emailPaciente,
+    sede: {
+      nombre: txt(sede.nombre),
+      direccion: txt(sede.direccion),
+      link_maps: txt(sede.link_maps),
+      telefono: txt(sede.telefono),
+      whatsapp: txt(sede.whatsapp),
+    },
   },
 }];

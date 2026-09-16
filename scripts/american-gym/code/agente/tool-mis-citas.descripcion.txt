@@ -1,0 +1,6 @@
+Devuelve las citas y clases que el cliente ya tiene reservadas, con servicio, día, hora y
+estado. No reserva, no cancela y no cambia nada: solo consulta.
+Usala SIEMPRE que el cliente pregunte qué tiene agendado, cuándo es su próxima cita o si
+tiene campo en alguna clase. No lo contestes de memoria ni con lo que dijiste antes en la
+conversación: pudo haber cambiado desde el gimnasio.
+Las encuentra solas por su teléfono: no le pidas ningún dato.

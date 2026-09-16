@@ -1,0 +1,2052 @@
+{
+  "id": "LsbRqfF2c32hVahw",
+  "name": "Agenda — disponibilidad y citas",
+  "active": true,
+  "updatedAt": "2026-08-28T21:10:11.187Z",
+  "activeVersionId": "a3947e87-8fad-49d2-8e89-acc18dd7636c",
+  "tags": [],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Costa_Rica",
+    "binaryMode": "separate"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "accion"
+            },
+            {
+              "name": "id_servicio"
+            },
+            {
+              "name": "fecha_texto"
+            },
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "nombre_paciente"
+            },
+            {
+              "name": "token"
+            },
+            {
+              "name": "email"
+            }
+          ]
+        }
+      },
+      "id": "trg-sub",
+      "name": "Cuando el agente llama",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -640,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agenda-test",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trg-web",
+      "name": "Webhook de prueba",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -640,
+        112
+      ],
+      "webhookId": "3f5c9c61-f71e-473c-b5d4-7a0b4a031605"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ne-accion",
+              "name": "accion",
+              "type": "string",
+              "value": "={{ $json.body ? $json.body.accion : $json.accion }}"
+            },
+            {
+              "id": "ne-id_servicio",
+              "name": "id_servicio",
+              "type": "string",
+              "value": "={{ $json.body ? $json.body.id_servicio : $json.id_servicio }}"
+            },
+            {
+              "id": "ne-fecha_texto",
+              "name": "fecha_texto",
+              "type": "string",
+              "value": "={{ $json.body ? $json.body.fecha_texto : $json.fecha_texto }}"
+            },
+            {
+              "id": "ne-telefono",
+              "name": "telefono",
+              "type": "string",
+              "value": "={{ $json.body ? $json.body.telefono : $json.telefono }}"
+            },
+            {
+              "id": "ne-nombre_paciente",
+              "name": "nombre_paciente",
+              "type": "string",
+              "value": "={{ $json.body ? $json.body.nombre_paciente : $json.nombre_paciente }}"
+            },
+            {
+              "id": "token",
+              "name": "token",
+              "type": "string",
+              "value": "={{ $json.body ? ($json.body.token || '') : ($json.token || '') }}"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "type": "string",
+              "value": "={{ $json.body ? ($json.body.email || '') : ($json.email || '') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "normalizar",
+      "name": "Normalizar entrada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -416,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA/values:batchGet?ranges=Servicios!A%3AN&ranges=Profesionales!A%3AI&ranges=Citas!A%3AS&ranges=Feriados!A%3AB&ranges=Config!A%3AI&ranges=Pacientes!A%3AQ&ranges=Oportunidades!A%3AR&ranges=Actividades!A%3AN",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "leer-todo",
+      "name": "Leer todo el CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -208,
+        -16
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte la respuesta cruda de values:batchGet en tablas de objetos.\n//\n// Por qué una sola llamada y no un nodo de Sheets por tab: la API de Google permite\n// 60 lecturas por minuto por usuario, y cada nodo de Sheets gasta ~2. Con 5 nodos por\n// consulta, dos pacientes conversando a la vez tumbaban la herramienta con un 429.\n// Un batchGet de 8 rangos gasta 1.\nconst ORDEN = ['servicios', 'profesionales', 'citas', 'feriados', 'config', 'pacientes', 'oportunidades', 'actividades'];\n\nconst cruda = $input.first().json;\nconst rangos = cruda.valueRanges || [];\n\nfunction aObjetos(valores) {\n  if (!valores || valores.length < 2) return [];\n  const cabeceras = valores[0].map((h) => String(h || '').trim());\n  return valores.slice(1)\n    .map((fila, i) => {\n      const o = { row_number: i + 2 };\n      cabeceras.forEach((h, c) => { if (h) o[h] = fila[c] === undefined ? '' : fila[c]; });\n      return o;\n    })\n    .filter((o) => Object.keys(o).length > 1 && Object.entries(o).some(([k, v]) => k !== 'row_number' && String(v).trim()));\n}\n\nconst tablas = {};\nORDEN.forEach((nombre, i) => { tablas[nombre] = aObjetos((rangos[i] || {}).values); });\n\nreturn [{\n  json: {\n    ...tablas,\n    conteos: Object.fromEntries(ORDEN.map((n) => [n, tablas[n].length])),\n  },\n}];\n"
+      },
+      "id": "preparar-datos",
+      "name": "Preparar datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resuelve en qué fechas/horas pensaba el paciente, a partir de sus palabras textuales.\n// NUNCA falla: si no entiende, asume \"lo más próximo disponible\" y lo dice en interpretacion.\nconst TZ = 'America/Costa_Rica';\nconst entrada = $('Normalizar entrada').first().json;\n\nconst ahora = DateTime.now().setZone(TZ);\nconst hoy = ahora.startOf('day');\nconst fmt = (d) => d.toFormat('yyyy-MM-dd');\nconst TILDES = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u', ñ: 'n' };\nconst sinTildes = (s) => String(s || '').toLowerCase().replace(/[áéíóúüñ]/g, (c) => TILDES[c]).trim();\n\nlet t = ' ' + sinTildes(entrada.fecha_texto).replace(/[.,;!?¿¡]/g, ' ').replace(/\\s+/g, ' ') + ' ';\n\nconst DIAS = { domingo: 7, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };\nconst MESES = {\n  enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7,\n  agosto: 8, setiembre: 9, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,\n};\n\nlet desde = null;\nlet hasta = null;\nlet franja = null;\nlet horaPretendida = null;\nlet soloEntreSemana = false;\nlet diaEspecifico = false;\nlet etiquetaDia = null;\nlet entendido = false;\n\n// ---------- 1. Franja horaria ----------\n// Ojo: \"mañana\" es día y franja a la vez. La franja solo cuenta si lleva artículo\n// delante (\"en la mañana\"), así que se saca del texto ANTES de buscar el día.\nif (/\\b(en|por|de|a) la manana\\b/.test(t) || /\\bla manana\\b/.test(t)) {\n  franja = 'manana';\n  t = t.replace(/\\b((en|por|de|a) )?la manana\\b/g, ' ');\n  entendido = true;\n}\nif (/\\b(en|por|de|a) la tarde\\b/.test(t) || /\\bla tarde\\b/.test(t)) {\n  franja = 'tarde';\n  t = t.replace(/\\b((en|por|de|a) )?la tarde\\b/g, ' ');\n  entendido = true;\n}\nif (/\\btemprano\\b|\\bprimera hora\\b/.test(t)) { franja = 'manana'; entendido = true; }\nif (/\\bal final del dia\\b|\\bultima hora\\b|\\btardecita\\b|\\bnoche\\b/.test(t)) { franja = 'tarde'; entendido = true; }\n\n// ---------- 2. Hora pretendida ----------\nconst mHora = t.match(/\\ba? ?las? (\\d{1,2})(?::(\\d{2}))?\\s*(y media|y cuarto)?\\s*(am|pm|a m|p m)?/)\n  || t.match(/\\b(\\d{1,2})(?::(\\d{2}))?\\s*(y media|y cuarto)?\\s*(am|pm)\\b/);\nif (mHora) {\n  let h = parseInt(mHora[1], 10);\n  let min = mHora[2] ? parseInt(mHora[2], 10) : 0;\n  if (mHora[3] === 'y media') min = 30;\n  if (mHora[3] === 'y cuarto') min = 15;\n  const sufijo = (mHora[4] || '').replace(/\\s/g, '');\n  if (sufijo === 'pm' && h < 12) h += 12;\n  else if (sufijo === 'am' && h === 12) h = 0;\n  else if (!sufijo) {\n    // Sin am/pm: la clínica abre 08:00–18:00, así que \"a las 3\" son las 15:00.\n    if (h >= 1 && h <= 7) h += 12;\n    else if (franja === 'tarde' && h < 12) h += 12;\n  }\n  if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {\n    horaPretendida = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');\n    entendido = true;\n    if (!franja) franja = h < 12 ? 'manana' : 'tarde';\n  }\n}\n\n// ---------- 3. Día o rango ----------\nconst proximaOcurrencia = (destino) => {\n  const delta = (destino - hoy.weekday + 7) % 7;\n  return hoy.plus({ days: delta });\n};\n\nif (/\\bpasado manana\\b/.test(t)) {\n  desde = hasta = hoy.plus({ days: 2 }); diaEspecifico = true; entendido = true;\n} else if (/\\bhoy\\b/.test(t)) {\n  desde = hasta = hoy; diaEspecifico = true; entendido = true;\n} else if (/\\bmanana\\b/.test(t)) {\n  desde = hasta = hoy.plus({ days: 1 }); diaEspecifico = true; entendido = true;\n} else if (/\\b(la )?(proxima|otra|siguiente) semana\\b|\\bla semana que viene\\b/.test(t)) {\n  const lunes = hoy.plus({ days: (8 - hoy.weekday) % 7 || 7 });\n  desde = lunes; hasta = lunes.plus({ days: 5 }); etiquetaDia = 'la próxima semana'; entendido = true;\n} else if (/\\besta semana\\b/.test(t)) {\n  desde = hoy; hasta = hoy.plus({ days: (6 - hoy.weekday + 7) % 7 }); etiquetaDia = 'esta semana'; entendido = true;\n} else if (/\\bfin de semana\\b/.test(t)) {\n  desde = hasta = proximaOcurrencia(6); diaEspecifico = true; etiquetaDia = 'el fin de semana'; entendido = true;\n} else if (/\\bentre semana\\b|\\bdias? de semana\\b/.test(t)) {\n  desde = hoy; hasta = hoy.plus({ days: 21 }); soloEntreSemana = true; etiquetaDia = 'entre semana'; entendido = true;\n}\n\nif (!desde) {\n  for (const [nombre, num] of Object.entries(DIAS)) {\n    if (new RegExp('\\\\b' + nombre + 's?\\\\b').test(t)) {\n      desde = hasta = proximaOcurrencia(num); diaEspecifico = true; entendido = true; break;\n    }\n  }\n}\n\n// \"el 5 de agosto\", \"el 5\", \"05/08\"\nif (!desde) {\n  const mFechaLarga = t.match(/\\bel? ?(\\d{1,2}) de ([a-z]+)/);\n  const mFechaCorta = t.match(/\\b(\\d{1,2})[\\/\\-](\\d{1,2})\\b/);\n  const mDespues = t.match(/\\b(despues|apartir|a partir) del? (\\d{1,2})\\b/);\n  const mAntes = t.match(/\\bantes del? (\\d{1,2})\\b/);\n  const mDiaSolo = t.match(/\\bel (\\d{1,2})\\b/);\n\n  const armarDia = (dia, mes) => {\n    let cand = hoy.set({ day: 1, month: mes || hoy.month }).set({ day: Math.min(dia, 28) });\n    cand = cand.set({ day: dia });\n    if (!cand.isValid) return null;\n    if (!mes && cand < hoy) cand = cand.plus({ months: 1 });\n    return cand;\n  };\n\n  if (mFechaLarga && MESES[mFechaLarga[2]]) {\n    desde = hasta = armarDia(parseInt(mFechaLarga[1], 10), MESES[mFechaLarga[2]]);\n    diaEspecifico = true; entendido = true;\n  } else if (mFechaCorta) {\n    desde = hasta = armarDia(parseInt(mFechaCorta[1], 10), parseInt(mFechaCorta[2], 10));\n    diaEspecifico = true; entendido = true;\n  } else if (mDespues) {\n    const d = armarDia(parseInt(mDespues[2], 10));\n    if (d) { desde = d.plus({ days: 1 }); hasta = desde.plus({ days: 21 }); etiquetaDia = 'después del ' + mDespues[2]; entendido = true; }\n  } else if (mAntes) {\n    const d = armarDia(parseInt(mAntes[1], 10));\n    if (d) { desde = hoy; hasta = d.minus({ days: 1 }); etiquetaDia = 'antes del ' + mAntes[1]; entendido = true; }\n  } else if (mDiaSolo) {\n    desde = hasta = armarDia(parseInt(mDiaSolo[1], 10));\n    diaEspecifico = true; entendido = true;\n  }\n}\n\n// ---------- 4. Por defecto: lo más próximo ----------\nif (!desde || !desde.isValid) { desde = hoy; hasta = hoy.plus({ days: 21 }); diaEspecifico = false; }\nif (!hasta || !hasta.isValid || hasta < desde) hasta = desde;\nif (desde < hoy) desde = hoy;\n\n// ---------- 5. Texto legible para que el agente lo repita ----------\nconst nombreDia = (d) => d.setLocale('es').toFormat(\"cccc d 'de' LLLL\");\nconst nombreFranja = franja === 'manana' ? ' por la mañana' : (franja === 'tarde' ? ' por la tarde' : '');\n// \"a las 3:00 p. m.\", no \"a las 15:00\": el agente repite este texto tal cual al paciente.\nlet nombreHora = '';\nif (horaPretendida) {\n  const [hh, mm] = horaPretendida.split(':').map(Number);\n  const h12 = hh % 12 === 0 ? 12 : hh % 12;\n  nombreHora = ` a las ${h12}:${String(mm).padStart(2, '0')}${hh < 12 ? ' a. m.' : ' p. m.'}`;\n}\n\nlet interpretacion;\nif (!entendido) {\n  interpretacion = 'lo más próximo disponible';\n} else if (etiquetaDia) {\n  interpretacion = etiquetaDia + nombreFranja + nombreHora;\n} else if (diaEspecifico) {\n  interpretacion = 'el ' + nombreDia(desde) + nombreFranja + nombreHora;\n} else {\n  interpretacion = ('lo más próximo disponible' + nombreFranja + nombreHora);\n}\n\nreturn [{\n  json: {\n    desde: fmt(desde),\n    hasta: fmt(hasta),\n    hora_pretendida: horaPretendida,\n    franja,\n    solo_entre_semana: soloEntreSemana,\n    dia_especifico: diaEspecifico,\n    entendido,\n    interpretacion,\n    ahora_iso: ahora.toISO(),\n    hoy: fmt(hoy),\n    texto_original: entrada.fecha_texto || '',\n  },\n}];\n"
+      },
+      "id": "interpretar",
+      "name": "Interpretar la fecha",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcula los espacios libres reales combinando Servicios, Profesionales, Citas,\n// Feriados y el horario de la sede. Implementa las reglas de DM_01 y DM_03.\n//\n// Las reglas de DÍA por especialidad (endodoncia mar/jue, ortodoncia L/X/V mañana,\n// implantes mié tarde o sáb) NO están codificadas acá: salen solas del cruce\n// profesionales_habilitados x dias_atencion.\nconst TZ = 'America/Costa_Rica';\nconst MINUTOS_ANTES_DEL_CIERRE = 60;   // DM_01: el último espacio, una hora antes del cierre\nconst TOPE_LARGO_SEMANA = 16 * 60;     // DM_03: nada de +90 min después de las 4:00 p.m.\nconst TOPE_LARGO_SABADO = 11 * 60;     // DM_03: ni después de las 11:00 los sábados\nconst DURACION_LARGA = 90;\nconst HORAS_DE_ANTICIPACION = 2;       // no se ofrece un espacio que arranca ya mismo\nconst DIAS_HORIZONTE = 21;\nconst URGENCIAS = { 'PROF-01': [['10:00', '10:30'], ['15:00', '15:30']] };  // DM_01: 2 espacios diarios\n\nconst entrada = $('Normalizar entrada').first().json;\nconst pedido = $('Interpretar la fecha').first().json;\n\nconst datos = $('Preparar datos').first().json;\nconst servicios = datos.servicios;\nconst profesionales = datos.profesionales;\nconst citas = datos.citas;\nconst feriados = new Set(datos.feriados.map((f) => String(f.fecha || '').trim()));\nconst sede = datos.config[0] || {};\n\nconst txt = (v) => (v === undefined || v === null ? '' : String(v)).trim();\nconst esVerdadero = (v) => txt(v).toUpperCase() === 'TRUE';\nconst aMin = (hhmm) => {\n  const m = txt(hhmm).match(/^(\\d{1,2}):(\\d{2})/);\n  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;\n};\nconst aHora = (min) => String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');\nconst ABREV = { 1: 'lun', 2: 'mar', 3: 'mie', 4: 'jue', 5: 'vie', 6: 'sab', 7: 'dom' };\nconst TILDES = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ñ: 'n' };\nconst norm = (s) => txt(s).toLowerCase().replace(/[áéíóúñ]/g, (c) => TILDES[c]);\n\nconst salir = (motivo, mensaje) => [{\n  json: { ok: false, motivo, mensaje, interpretacion: pedido.interpretacion, alternativas: [], slots: [] },\n}];\n\n// ---------- 1. El servicio ----------\n// Al reagendar, el servicio sale de la CITA localizada, no del modelo: se mueve la\n// misma cita y no se inventa otra.\nconst idServicioEfectivo = txt($('Localizar cita').first().json.id_servicio) || txt(entrada.id_servicio);\nconst servicio = servicios.find((s) => txt(s.id_servicio) === idServicioEfectivo);\nif (!servicio) {\n  return salir('servicio_no_disponible',\n    'No encuentro ese servicio en el catálogo de la clínica.');\n}\nif (!esVerdadero(servicio.activo)) {\n  return salir('servicio_no_disponible',\n    `${servicio.nombre} no se está ofreciendo en este momento.`);\n}\nconst duracion = parseInt(txt(servicio.duracion_min), 10) || 30;\n\n// ---------- 2. Profesionales elegibles ----------\nconst habilitados = txt(servicio.profesionales_habilitados).split(';').map(txt).filter(Boolean);\nconst equipo = profesionales.filter((p) => habilitados.includes(txt(p.id_profesional)) && esVerdadero(p.activo));\nif (!equipo.length) {\n  return salir('servicio_no_disponible',\n    `Ahora mismo no hay un profesional disponible para ${servicio.nombre}.`);\n}\n\n// ---------- 3. Horarios ----------\n// Profesionales.horario admite \"08:00-18:00\" y \"Mié:13:00-18:00;Sáb:08:00-13:00\"\nfunction ventanaProfesional(horario, diaSemana) {\n  const h = txt(horario);\n  if (h.includes(':') && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(h.split('-')[0] || '')) {\n    for (const bloque of h.split(';')) {\n      const [dia, rango] = bloque.split(/:(.+)/);\n      if (norm(dia).slice(0, 3) === ABREV[diaSemana] && rango) {\n        const [ini, fin] = rango.split('-');\n        return [aMin(ini), aMin(fin)];\n      }\n    }\n    return null;\n  }\n  const [ini, fin] = h.split('-');\n  const a = aMin(ini); const b = aMin(fin);\n  return a !== null && b !== null ? [a, b] : null;\n}\n\n// Config.horario_atencion: \"Lun-Vie 08:00-18:00, Sáb 08:00-13:00\"\nfunction ventanaSede(diaSemana) {\n  const partes = txt(sede.horario_atencion).split(',');\n  for (const parte of partes) {\n    const m = norm(parte).match(/([a-z]{3})\\s*(?:-\\s*([a-z]{3}))?\\s*(\\d{1,2}:\\d{2})\\s*-\\s*(\\d{1,2}:\\d{2})/);\n    if (!m) continue;\n    const idx = (a) => Object.entries(ABREV).find(([, v]) => v === a)?.[0];\n    const d1 = parseInt(idx(m[1]), 10);\n    const d2 = m[2] ? parseInt(idx(m[2]), 10) : d1;\n    if (d1 && diaSemana >= d1 && diaSemana <= d2) return [aMin(m[3]), aMin(m[4])];\n  }\n  return null;\n}\n\n// ---------- 4. Citas ocupadas, por profesional y día ----------\nconst ocupadas = {};\nfor (const c of citas) {\n  if (!['Solicitada', 'Confirmada'].includes(txt(c.estado))) continue;\n  const clave = txt(c.id_profesional) + '|' + txt(c.fecha);\n  const ini = aMin(c.hora_inicio); const fin = aMin(c.hora_fin);\n  if (ini === null || fin === null) continue;\n  (ocupadas[clave] = ocupadas[clave] || []).push([ini, fin]);\n}\n\n// ---------- 5. Barrido de días ----------\nconst ahora = DateTime.fromISO(pedido.ahora_iso, { zone: TZ });\nconst minimo = ahora.plus({ hours: HORAS_DE_ANTICIPACION });\nconst hoy = DateTime.fromISO(pedido.hoy, { zone: TZ });\nconst pedidoDesde = DateTime.fromISO(pedido.desde, { zone: TZ });\n// Se barre siempre desde hoy, aunque el paciente haya pedido un día lejano: es lo que\n// permite ofrecer alternativas más cercanas sin una segunda llamada.\nconst inicioBarrido = hoy;\nconst finBarrido = pedidoDesde.plus({ days: DIAS_HORIZONTE });\n\n// `dur` y `team` se pasan por parámetro para poder calcular también la malla de la\n// valoración inicial con este MISMO generador. Duplicarlo en otro nodo sería dos fuentes\n// para el mismo cálculo, que es justo lo que este motor existe para evitar.\nfunction slotsDelDia(dia, paso, dur = duracion, team = equipo) {\n  const fecha = dia.toFormat('yyyy-MM-dd');\n  const ds = dia.weekday;\n  const salida = [];\n  if (ds === 7 || feriados.has(fecha)) return salida;            // domingos y feriados: cerrado\n  if (pedido.solo_entre_semana && ds === 6) return salida;\n  const sedeV = ventanaSede(ds);\n  if (!sedeV) return salida;\n  const limiteSede = sedeV[1] - MINUTOS_ANTES_DEL_CIERRE;\n  const topeLargo = ds === 6 ? TOPE_LARGO_SABADO : TOPE_LARGO_SEMANA;\n\n  for (const p of team) {\n    const dias = txt(p.dias_atencion).split(';').map((d) => norm(d).slice(0, 3));\n    if (!dias.includes(ABREV[ds])) continue;\n    const propia = ventanaProfesional(p.horario, ds);\n    if (!propia) continue;\n    const abre = Math.max(propia[0], sedeV[0]);\n    const cierra = Math.min(propia[1], sedeV[1]);\n    const limite = Math.min(cierra, limiteSede);\n    const choques = (ocupadas[txt(p.id_profesional) + '|' + fecha] || [])\n      .concat(URGENCIAS[txt(p.id_profesional)] ? URGENCIAS[txt(p.id_profesional)].map(([a, b]) => [aMin(a), aMin(b)]) : []);\n\n    for (let ini = abre; ini + dur <= limite; ini += paso) {\n      if (dur > DURACION_LARGA && ini > topeLargo) continue;\n      const fin = ini + dur;\n      if (choques.some(([a, b]) => ini < b && fin > a)) continue;\n      const arranque = dia.set({ hour: Math.floor(ini / 60), minute: ini % 60 });\n      if (arranque < minimo) continue;\n      salida.push({\n        fecha,\n        dia_semana: ds,\n        hora_inicio: aHora(ini),\n        hora_fin: aHora(fin),\n        minuto_inicio: ini,\n        id_profesional: txt(p.id_profesional),\n        profesional: txt(p.nombre),\n      });\n    }\n  }\n  return salida;\n}\n\n// Malla anclada a la duración del servicio: una limpieza de 45 min da 08:00, 08:45,\n// 09:30... y una valoración de 30 da 08:00, 08:30... La agenda se ve distinta según\n// el servicio, que es como funciona una clínica de verdad.\nlet slots = [];\nfor (let d = inicioBarrido; d <= finBarrido; d = d.plus({ days: 1 })) {\n  slots = slots.concat(slotsDelDia(d, duracion));\n}\n\n// Pasada de rescate: si el día que pidió quedó vacío, se recalcula ESE día con malla\n// de 15 min. La malla anclada puede no ver un hueco que dejó una cancelación, y el\n// contrato es no decir \"no hay\" cuando sí hay.\nlet huboRescate = false;\nif (pedido.dia_especifico) {\n  const dia = DateTime.fromISO(pedido.desde, { zone: TZ });\n  if (!slots.some((s) => s.fecha === pedido.desde)) {\n    const rescate = slotsDelDia(dia, 15);\n    if (rescate.length) { slots = slots.concat(rescate); huboRescate = true; }\n  }\n}\n\nslots.sort((a, b) => (a.fecha === b.fecha ? a.minuto_inicio - b.minuto_inicio : a.fecha < b.fecha ? -1 : 1));\n\n// Lo que el paciente pidió, contra todo lo que existe. Cuando pidió un día concreto,\n// \"en rango\" es ese día; cuando pidió un rango (\"la próxima semana\", \"después del 15\"),\n// es ese rango. `slots` completo queda igual para poder ofrecer alternativas.\nconst enRango = slots.filter((s) => s.fecha >= pedido.desde && s.fecha <= pedido.hasta);\n\n// ¿Por qué no hay nada el día que pidió? El motivo tiene que ser el REAL: decir que el\n// profesional no atiende sábados cuando el problema es que ese sábado es feriado es\n// mentirle al paciente.\nlet motivoDia = null;\nif (pedido.dia_especifico && !slots.some((s) => s.fecha === pedido.desde)) {\n  const dia = DateTime.fromISO(pedido.desde, { zone: TZ });\n  const atiendeEseDia = equipo.some((p) => txt(p.dias_atencion).split(';')\n    .map((d) => norm(d).slice(0, 3)).includes(ABREV[dia.weekday]));\n  if (feriados.has(pedido.desde)) motivoDia = 'feriado';\n  else if (dia.weekday === 7) motivoDia = 'domingo';\n  else if (!atiendeEseDia) motivoDia = 'dia_no_habilitado';\n  else motivoDia = 'dia_lleno';\n}\n\n// ---------- 6. La salida de emergencia del paciente nuevo ----------\n// Si el servicio pedido NO es la valoración, se calcula TAMBIÉN su malla. Cuesta solo CPU\n// sobre datos que ya se leyeron —ni una llamada más a Sheets— y le permite a \"Validar\n// reglas\" ofrecer horarios concretos en la misma respuesta en vez de devolver\n// `alternativas: []` y confiar en que el modelo haga una segunda llamada. Un contrato que\n// depende de que el modelo haga algo es un contrato roto.\nconst SRV_VALORACION = 'SRV-001';\nlet slotsValoracion = [];\nif (txt(servicio.id_servicio) !== SRV_VALORACION) {\n  const sv = servicios.find((s) => txt(s.id_servicio) === SRV_VALORACION);\n  if (sv && esVerdadero(sv.activo)) {\n    const durV = parseInt(txt(sv.duracion_min), 10) || 30;\n    const habV = txt(sv.profesionales_habilitados).split(';').map(txt).filter(Boolean);\n    const equipoV = profesionales.filter((p) => habV.includes(txt(p.id_profesional)) && esVerdadero(p.activo));\n    if (equipoV.length) {\n      for (let d = inicioBarrido; d <= finBarrido; d = d.plus({ days: 1 })) {\n        slotsValoracion = slotsValoracion.concat(slotsDelDia(d, durV, durV, equipoV));\n      }\n      slotsValoracion.sort((a, b) => (a.fecha === b.fecha\n        ? a.minuto_inicio - b.minuto_inicio : a.fecha < b.fecha ? -1 : 1));\n      slotsValoracion = slotsValoracion.slice(0, 60);\n    }\n  }\n}\n\nreturn [{\n  json: {\n    ok: true,\n    motivo: motivoDia,\n    slots_valoracion: slotsValoracion,\n    interpretacion: pedido.interpretacion,\n    id_servicio: txt(servicio.id_servicio),\n    servicio: txt(servicio.nombre),\n    duracion_min: duracion,\n    requiere_valoracion: esVerdadero(servicio.requiere_valoracion),\n    equipo: equipo.map((p) => ({ id: txt(p.id_profesional), nombre: txt(p.nombre), dias: txt(p.dias_atencion) })),\n    hubo_rescate: huboRescate,\n    total_slots: slots.length,\n    total_en_rango: enRango.length,\n    slots,\n    slots_en_rango: enRango,\n  },\n}];\n"
+      },
+      "id": "slots",
+      "name": "Calcular slots libres",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "motor-ok-c",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "motor-ok",
+      "name": "¿Motor OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ordena los espacios libres por cercanía a lo que el paciente pidió y arma el mensaje.\n// El contrato es que NUNCA se devuelva vacío ni un \"no hay\" pelado: un resultado vacío\n// es exactamente lo que hace alucinar al modelo.\nconst TZ = 'America/Costa_Rica';\nconst MAX_ALTERNATIVAS = 6;\nconst VALORACIONES = ['SRV-001', 'SRV-016'];\n\nconst motor = $input.first().json;\nconst pedido = $('Interpretar la fecha').first().json;\nconst loc = $('Localizar cita').first().json;\n\nconst aMin = (hhmm) => {\n  const m = String(hhmm || '').match(/^(\\d{1,2}):(\\d{2})/);\n  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;\n};\n\n// \"martes 11 de agosto, 9:00 a. m.\"\nfunction enEspanol(slot) {\n  const d = DateTime.fromISO(slot.fecha, { zone: TZ }).setLocale('es');\n  const min = aMin(slot.hora_inicio);\n  const h24 = Math.floor(min / 60);\n  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;\n  const mm = min % 60;\n  const hora = h12 + (mm ? ':' + String(mm).padStart(2, '0') : ':00') + (h24 < 12 ? ' a. m.' : ' p. m.');\n  return `${d.toFormat(\"cccc d 'de' LLLL\")}, ${hora}, con ${slot.profesional}`;\n}\n\nconst publico = (s) => ({\n  texto: enEspanol(s),\n  fecha: s.fecha,\n  hora_inicio: s.hora_inicio,\n  hora_fin: s.hora_fin,\n  id_profesional: s.id_profesional,\n  profesional: s.profesional,\n});\n\n// distancia = |Δ días| x 100\n//           + |Δ minutos respecto a la hora pretendida| / 15\n//           - 40 si cae en la franja que pidió\n//           - 25 si es el mismo día que pidió\nfunction distancia(slot) {\n  const dias = Math.abs(DateTime.fromISO(slot.fecha, { zone: TZ })\n    .diff(DateTime.fromISO(pedido.desde, { zone: TZ }), 'days').days);\n  let d = dias * 100;\n  if (pedido.hora_pretendida) d += Math.abs(slot.minuto_inicio - aMin(pedido.hora_pretendida)) / 15;\n  else d += slot.minuto_inicio / 600;                     // a igualdad, lo más temprano\n  const esManana = slot.minuto_inicio < 12 * 60;\n  if (pedido.franja === 'manana' && esManana) d -= 40;\n  if (pedido.franja === 'tarde' && !esManana) d -= 40;\n  if (slot.fecha === pedido.desde) d -= 25;\n  return d;\n}\n\n// Se ordena y se deja UN profesional por fecha+hora. Si no, una valoración —que la hacen\n// los cuatro— ofrecería \"8:00 con Dulce María\" y \"8:00 con Andrés\" como si fueran dos\n// espacios distintos. Al paciente le importa la hora, no con quién.\nfunction ordenar(lista) {\n  const vistos = new Set();\n  return [...lista].sort((a, b) => distancia(a) - distancia(b)).filter((s) => {\n    const clave = s.fecha + '|' + s.hora_inicio;\n    if (vistos.has(clave)) return false;\n    vistos.add(clave);\n    return true;\n  });\n}\n\nconst enRango = motor.slots_en_rango || [];\nconst todos = motor.slots || [];\n\n// ¿Está libre exactamente lo que pidió?\nlet exactos = enRango;\nif (pedido.hora_pretendida) exactos = enRango.filter((s) => s.hora_inicio === pedido.hora_pretendida);\nif (pedido.franja === 'manana') exactos = exactos.filter((s) => s.minuto_inicio < 12 * 60);\nif (pedido.franja === 'tarde') exactos = exactos.filter((s) => s.minuto_inicio >= 12 * 60);\n\nconst disponible = exactos.length > 0;\nconst base = disponible ? exactos : (enRango.length ? enRango : todos);\nconst alternativas = ordenar(base).slice(0, MAX_ALTERNATIVAS).map(publico);\n\n// ---------- mensaje redactado para que el agente lo parafrasee ----------\nconst nombreDia = (f) => DateTime.fromISO(f, { zone: TZ }).setLocale('es').toFormat(\"cccc d 'de' LLLL\");\nlet mensaje;\n\nif (!alternativas.length) {\n  mensaje = `No tengo espacios de ${motor.servicio} en las próximas semanas. `\n    + 'Coordinemos con la clínica para buscarle un espacio.';\n} else if (motor.motivo === 'feriado') {\n  mensaje = `Ese día es feriado y la clínica está cerrada. `\n    + `Lo más cercano que tengo es ${alternativas[0].texto}.`;\n} else if (motor.motivo === 'domingo') {\n  mensaje = `Los domingos la clínica no abre. Lo más cercano que tengo es ${alternativas[0].texto}.`;\n} else if (motor.motivo === 'dia_no_habilitado') {\n  const dias = motor.equipo.map((p) => `${p.nombre} atiende ${p.dias.split(';').join(', ')}`).join('; ');\n  mensaje = `${motor.servicio} no se agenda ese día: ${dias}. `\n    + `Lo más cercano que tengo es ${alternativas[0].texto}.`;\n} else if (motor.motivo === 'dia_lleno') {\n  mensaje = `Ese día ya está lleno. Lo más cercano que tengo es `\n    + `${alternativas.slice(0, 3).map((a) => a.texto).join('; ')}.`;\n} else if (disponible) {\n  mensaje = `Sí tengo espacio: ${alternativas.slice(0, 3).map((a) => a.texto).join('; ')}.`;\n} else if (pedido.hora_pretendida) {\n  const mismoDia = alternativas.filter((a) => a.fecha === pedido.desde);\n  mensaje = mismoDia.length\n    ? `Esa hora está ocupada, pero ${nombreDia(pedido.desde)} me quedan `\n      + `${mismoDia.slice(0, 3).map((a) => a.hora_inicio).join(' y ')}.`\n    : `Esa hora está ocupada y ese día no me queda nada más. Lo más cercano es ${alternativas[0].texto}.`;\n} else {\n  mensaje = `Para ${motor.servicio} lo más cercano que tengo es `\n    + `${alternativas.slice(0, 3).map((a) => a.texto).join('; ')}.`;\n}\n\n// ---------- aviso: la regla de valoración, dicha por quien la conoce ----------\n// Consultar NO bloquea —informa—, pero tiene que decir la verdad sobre la regla. Si calla,\n// el modelo la deduce de la columna `requiere_valoracion` del SERVICIO y afirma cosas\n// sobre el PACIENTE: el 2026-08-28 (exec 27517) contestó \"la limpieza no requiere\n// valoración previa\" a alguien que preguntaba por la regla de la clínica, y le habría\n// contestado igual a un paciente nuevo, al que \"agendar\" después rebota.\n//\n// Solo se emite cuando cambia lo que el paciente puede hacer. Para el resto de los casos\n// viajan los hechos crudos (`paciente_existente`, `valoracion`) y la regla vive en el\n// prompt: la política es estable, el estado del paciente no.\nconst val = loc.valoracion || { estado: 'ninguna', texto: '' };\nconst proximas = loc.citas_proximas || [];\nconst esValoracion = VALORACIONES.includes(motor.id_servicio);\nconst yaValorado = val.estado === 'realizada';\nconst reglaA = loc.paciente_existente !== true;      // primera visita a la clínica\nconst reglaB = motor.requiere_valoracion === true;   // el servicio la exige\n\nlet avisoRegla = '';\nif (esValoracion) {\n  avisoRegla = '';\n} else if (!yaValorado && reglaA) {\n  avisoRegla = val.estado === 'agendada'\n    ? `Es su primera visita, así que la clínica pide una valoración inicial antes de ${motor.servicio}. `\n      + `Ya tiene la suya agendada para ${val.texto}, y el tratamiento va después de esa.`\n    : `Es su primera visita, así que la clínica pide una valoración inicial antes de ${motor.servicio} `\n      + '(30 minutos, 15.000 colones, con examen completo, plan por escrito y radiografías).';\n} else if (!yaValorado && reglaB) {\n  avisoRegla = val.estado === 'agendada'\n    ? `${motor.servicio} requiere una valoración previa y usted ya tiene la suya agendada para `\n      + `${val.texto}. El tratamiento se agenda después de esa.`\n    : `${motor.servicio} requiere una valoración previa (30 minutos, 15.000 colones) antes de reservarlo.`;\n} else if (yaValorado && reglaB) {\n  avisoRegla = `${motor.servicio} requiere valoración previa, y usted ya la tiene hecha `\n    + `(${val.texto}), así que se lo puedo agendar directamente.`;\n}\n\n// `nota_valoracion` va SIEMPRE, incluso cuando ninguna regla está activa. Es el hecho ya\n// redactado, listo para cuando el paciente pregunte \"¿puedo agendar sin valoración?\".\n// `aviso` es lo que hay que decir sin que lo pidan; esto es lo que hay que decir cuando\n// lo piden. Sin este campo el modelo contestaba esa pregunta desde la columna\n// `requiere_valoracion` del catálogo y se equivocaba de sujeto: hablaba del servicio\n// cuando le preguntaban por la persona (2026-08-28, execs 27517 y 27565).\nlet notaValoracion;\nif (esValoracion) {\n  notaValoracion = 'Esta es justamente la cita de valoración inicial.';\n} else if (reglaA) {\n  notaValoracion = 'La clínica pide una valoración inicial en la primera visita, y esta es '\n    + `la suya, así que ${motor.servicio} va después de esa.`;\n} else if (reglaB && !yaValorado) {\n  notaValoracion = `${motor.servicio} requiere una valoración previa y usted todavía no la tiene`\n    + `${val.estado === 'agendada' ? `, aunque ya la tiene agendada para ${val.texto}` : ' hecha'}.`;\n} else if (reglaB && yaValorado) {\n  notaValoracion = `${motor.servicio} requiere una valoración previa y usted ya la tiene hecha `\n    + `(${val.texto}), así que no le hace falta otra.`;\n} else {\n  notaValoracion = 'La clínica pide la valoración inicial solo en la primera visita. Usted ya '\n    + `está registrado con nosotros, así que para ${motor.servicio} no le hace falta.`;\n}\n\n// Cada vez que el paciente va a agendar se le recuerdan las citas que ya tiene.\nconst recordatorio = proximas.length\n  ? `Ya tiene ${proximas.length === 1 ? 'una cita agendada' : `${proximas.length} citas agendadas`}: `\n    + `${proximas.map((c) => `${c.servicio}, ${c.texto}`).join('; ')}.`\n  : '';\n\nreturn [{\n  json: {\n    ok: true,\n    accion: 'consultar_disponibilidad',\n    interpretacion: motor.interpretacion,\n    servicio: motor.servicio,\n    id_servicio: motor.id_servicio,\n    duracion_min: motor.duracion_min,\n    disponible,\n    motivo: motor.motivo,\n    alternativas,\n    mensaje,\n    // contexto del paciente: los hechos, para que el modelo no los deduzca\n    paciente_existente: loc.paciente_existente === true,\n    valoracion: val,\n    citas_proximas: proximas,\n    aviso: [avisoRegla, recordatorio].filter(Boolean).join(' '),\n    nota_valoracion: notaValoracion,\n  },\n}];\n"
+      },
+      "id": "ordenar",
+      "name": "Ordenar por cercanía",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Regla de DM_03 que depende SOLO del paciente y del servicio, no de la hora:\n// toda persona que nunca ha sido atendida pasa primero por una valoración inicial.\n//\n// Corre ANTES de resolver a qué espacio se refería el paciente, a propósito. Si corriera\n// después, pedir una limpieza a una hora que no existe en la malla devolvería \"ese espacio\n// no está disponible\" y el paciente nuevo se iría con alternativas que no puede reservar.\n//\n// La otra regla de DM_03 —no dos citas de tratamiento el mismo día— sí depende del espacio\n// elegido y se valida en \"Confirmar y preparar\", contra la relectura fresca de Citas.\n//\n// Son DOS reglas distintas y hasta el 2026-08-28 se confundían en una sola condición:\n//   A. PACIENTE: la primera visita pasa por valoración, sea cual sea el servicio.\n//   B. SERVICIO: algunos tratamientos la exigen aunque el paciente ya sea conocido.\n// La B no miraba si la valoración había ocurrido, así que rebotaba para siempre: 21 de los\n// 35 servicios activos eran inagendables de por vida. Ahora ambas se levantan con una\n// valoración YA ATENDIDA, que es lo que `Localizar cita` calcula en `valoracion.estado`.\nconst SRV_VALORACION = 'SRV-001';\nconst SRV_VALORACION_NINO = 'SRV-016';\n\nconst motor = $input.first().json;\nconst entrada = $('Normalizar entrada').first().json;\nconst datos = $('Preparar datos').first().json;\nconst loc = $('Localizar cita').first().json;\n\nconst txt = (v) => (v === undefined || v === null ? '' : String(v)).trim();\n// La hoja mezcla \"+506 8888-9999\" y \"(+506) 8888-9999\": se compara solo por dígitos.\nconst soloDigitos = (t) => txt(t).replace(/\\D/g, '').replace(/^506/, '');\nconst telPaciente = soloDigitos(entrada.telefono);\n\nconst paciente = datos.pacientes.find((p) => soloDigitos(p.telefono) && soloDigitos(p.telefono) === telPaciente);\nconst oportunidad = datos.oportunidades.find((o) => soloDigitos(o.telefono) === telPaciente\n  && !['Ganada', 'Perdida'].includes(txt(o.etapa)));\n\nconst valoracion = loc.valoracion || { estado: 'ninguna', texto: '' };\nconst proximas = loc.citas_proximas || [];\n\n// Cada vez que se intenta agendar, se le recuerdan al paciente las citas que ya tiene.\n// Va en el `mensaje`, redactado para él, no como un dato suelto que el modelo deba\n// interpretar por su cuenta.\nconst recordatorio = proximas.length\n  ? ` Por cierto, ya tiene ${proximas.length === 1 ? 'una cita agendada' : `${proximas.length} citas agendadas`}: `\n    + `${proximas.map((c) => `${c.servicio}, ${c.texto}`).join('; ')}.`\n  : '';\n\nconst esValoracion = [SRV_VALORACION, SRV_VALORACION_NINO].includes(motor.id_servicio);\nconst yaValorado = valoracion.estado === 'realizada';\nconst reglaA = !paciente;                            // primera visita a la clínica\nconst reglaB = motor.requiere_valoracion === true;   // el servicio la exige\n\nif (!esValoracion && !yaValorado && (reglaA || reglaB)) {\n  const razon = reglaA\n    ? 'Como es su primera vez en la clínica, primero necesita una cita de valoración inicial'\n    : `${motor.servicio} requiere una valoración previa`;\n\n  // Ya tiene la valoración reservada: no hay nada nuevo que ofrecerle, solo esperar a que\n  // ocurra. Ofrecerle más horarios de valoración acá sería empujarlo a duplicarla.\n  if (valoracion.estado === 'agendada') {\n    return [{\n      json: {\n        ok: false, accion: 'agendar', motivo: 'requiere_valoracion_previa', disponible: false,\n        interpretacion: motor.interpretacion, servicio: motor.servicio,\n        id_servicio_sugerido: null,\n        valoracion, citas_proximas: proximas, paciente_existente: !!paciente,\n        nota_valoracion: `${motor.servicio} requiere una valoración previa y la suya ya está `\n          + `agendada para ${valoracion.texto}.`,\n        mensaje: `${razon}, y usted ya tiene la suya agendada para ${valoracion.texto}. `\n          + `${motor.servicio} se agenda después de esa cita.${recordatorio}`,\n        alternativas: [],\n      },\n    }];\n  }\n\n  // Horarios REALES de la valoración, calculados por \"Calcular slots libres\" sobre los\n  // mismos datos ya leídos. Antes esto devolvía `alternativas: []` y un mensaje escrito\n  // para el modelo (\"consulte la disponibilidad...\"), confiando en que hiciera una segunda\n  // llamada. No siempre la hacía, y el paciente se quedaba sin una sola hora concreta.\n  // Un contrato que depende de que el modelo haga algo es un contrato roto.\n  const TZ = 'America/Costa_Rica';\n  const enEspanol = (s) => {\n    const d = DateTime.fromISO(s.fecha, { zone: TZ }).setLocale('es');\n    const [hh, mm] = String(s.hora_inicio).split(':').map(Number);\n    const h12 = hh % 12 === 0 ? 12 : hh % 12;\n    return `${d.toFormat(\"cccc d 'de' LLLL\")}, ${h12}:${String(mm).padStart(2, '0')}`\n      + `${hh < 12 ? ' a. m.' : ' p. m.'}, con ${s.profesional}`;\n  };\n  const vistos = new Set();\n  const alternativas = (motor.slots_valoracion || [])\n    .filter((s) => {\n      const clave = s.fecha + '|' + s.hora_inicio;\n      if (vistos.has(clave)) return false;\n      vistos.add(clave);\n      return true;\n    })\n    .slice(0, 6)\n    .map((s) => ({\n      texto: enEspanol(s), fecha: s.fecha, hora_inicio: s.hora_inicio, hora_fin: s.hora_fin,\n      id_profesional: s.id_profesional, profesional: s.profesional,\n    }));\n\n  return [{\n    json: {\n      ok: false, accion: 'agendar', motivo: 'requiere_valoracion_previa', disponible: false,\n      interpretacion: motor.interpretacion, servicio: motor.servicio,\n      // por si el agente prefiere volver a consultar disponibilidad con ESTE servicio\n      id_servicio_sugerido: SRV_VALORACION,\n      valoracion, citas_proximas: proximas, paciente_existente: !!paciente,\n      nota_valoracion: reglaA\n        ? 'La clínica pide una valoración inicial en la primera visita, y esta es la suya, '\n          + `así que ${motor.servicio} va después de esa.`\n        : `${motor.servicio} requiere una valoración previa y usted todavía no la tiene hecha.`,\n      mensaje: `${razon}. Dura 30 minutos, cuesta 15.000 colones e incluye el examen completo, `\n        + 'el plan de tratamiento por escrito y las radiografías necesarias.'\n        + (alternativas.length\n          ? ` Le puedo ofrecer: ${alternativas.slice(0, 3).map((a) => a.texto).join('; ')}.`\n          : '')\n        + recordatorio,\n      alternativas,\n    },\n  }];\n}\n\nreturn [{\n  json: {\n    ...motor,\n    ok: true,\n    paciente_existente: !!paciente,\n    id_paciente: paciente ? txt(paciente.id_paciente) : null,\n    nombre_paciente: paciente ? txt(paciente.nombre_completo) : txt(entrada.nombre_paciente),\n    telefono: txt(entrada.telefono),\n    id_oportunidad: oportunidad ? txt(oportunidad.id_oportunidad) : null,\n    paciente_row: paciente || null,\n    // viajan hasta \"Respuesta agendada\" para poder recordarle sus otras citas\n    valoracion,\n    citas_proximas: proximas,\n  },\n}];\n"
+      },
+      "id": "validar",
+      "name": "Validar reglas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "puede-c",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "puede",
+      "name": "¿Puede agendar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A cuál de los espacios libres se refería el paciente cuando dijo \"dale, el de las 3\".\n// Se resuelve contra la disponibilidad RECALCULADA en este momento, no contra lo que se\n// ofreció turnos atrás: así se detecta si el espacio se ocupó mientras conversaban.\nconst TZ = 'America/Costa_Rica';\n\nconst motor = $input.first().json;\nconst pedido = $('Interpretar la fecha').first().json;\nconst entrada = $('Normalizar entrada').first().json;\n\nconst TILDES = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ñ: 'n' };\nconst norm = (s) => String(s || '').toLowerCase().replace(/[áéíóúñ]/g, (c) => TILDES[c]);\nconst texto = norm(entrada.fecha_texto);\n\nconst aMin = (h) => {\n  const m = String(h || '').match(/^(\\d{1,2}):(\\d{2})/);\n  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;\n};\nfunction enEspanol(s) {\n  const d = DateTime.fromISO(s.fecha, { zone: TZ }).setLocale('es');\n  const min = aMin(s.hora_inicio);\n  const h24 = Math.floor(min / 60);\n  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;\n  const hora = h12 + ':' + String(min % 60).padStart(2, '0') + (h24 < 12 ? ' a. m.' : ' p. m.');\n  return `${d.toFormat(\"cccc d 'de' LLLL\")}, ${hora}, con ${s.profesional}`;\n}\nconst publico = (s) => ({\n  texto: enEspanol(s), fecha: s.fecha, hora_inicio: s.hora_inicio, hora_fin: s.hora_fin,\n  id_profesional: s.id_profesional, profesional: s.profesional,\n});\n\nconst todos = motor.slots || [];\nconst fallar = (motivo, mensaje, opciones) => [{\n  json: {\n    ok: false, accion: 'agendar', motivo, mensaje,\n    interpretacion: motor.interpretacion, servicio: motor.servicio, id_servicio: motor.id_servicio,\n    disponible: false,\n    alternativas: (opciones && opciones.length ? opciones : todos.slice(0, 6)).map(publico),\n  },\n}];\n\nif (!todos.length) {\n  return fallar('fuera_de_horario',\n    `No tengo espacios de ${motor.servicio} en las próximas semanas.`, []);\n}\n\n// ---------- filtrar por lo que dijo ----------\nlet candidatos = todos;\nif (pedido.dia_especifico) candidatos = candidatos.filter((s) => s.fecha === pedido.desde);\nif (pedido.hora_pretendida) candidatos = candidatos.filter((s) => s.hora_inicio === pedido.hora_pretendida);\nif (pedido.franja === 'manana') candidatos = candidatos.filter((s) => s.minuto_inicio < 12 * 60);\nif (pedido.franja === 'tarde') candidatos = candidatos.filter((s) => s.minuto_inicio >= 12 * 60);\n\n// Un profesional por fecha+hora. Sin esto, una valoración —que la hacen los cuatro—\n// se ofrecería como \"08:00, 08:00, 08:30, 08:30\".\nconst vistos = new Set();\ncandidatos = candidatos.filter((s) => {\n  const clave = s.fecha + '|' + s.hora_inicio;\n  if (vistos.has(clave)) return false;\n  vistos.add(clave);\n  return true;\n});\n\n// \"el primero\", \"el segundo\", \"la tercera\": posición sobre lo que se ofreció.\nconst ORDINALES = { primer: 1, primero: 1, primera: 1, segundo: 2, segunda: 2, tercer: 3, tercero: 3, tercera: 3, cuarto: 4, cuarta: 4 };\nconst mOrdinal = Object.keys(ORDINALES).find((k) => new RegExp('\\\\b' + k + '\\\\b').test(texto));\nif (mOrdinal && candidatos.length > 1) {\n  const i = ORDINALES[mOrdinal] - 1;\n  if (candidatos[i]) candidatos = [candidatos[i]];\n}\n\nif (!candidatos.length) {\n  const cercanos = pedido.dia_especifico ? todos.filter((s) => s.fecha === pedido.desde) : [];\n  return fallar('no_coincide',\n    `Ese espacio ya no está disponible. Le puedo ofrecer ${enEspanol(todos[0])}.`,\n    cercanos.length ? cercanos : todos.slice(0, 6));\n}\n\n// Varios candidatos a la misma hora y día pero con distinto profesional no es ambigüedad\n// para el paciente: se toma el primero. Ambiguo de verdad es \"el jueves\" con tres horas.\nconst distintos = new Set(candidatos.map((s) => s.fecha + ' ' + s.hora_inicio));\nif (distintos.size > 1) {\n  // Repartidas a lo largo del día, NO las 4 primeras. Con 18 espacios libres las 4 primeras\n  // son todas de la mañana, así que el espacio de la tarde que el paciente venía pidiendo\n  // desaparecía de la lista y el modelo lo leía como \"ya no está disponible\" (2026-08-07).\n  const n = Math.min(5, candidatos.length);\n  const paso = (candidatos.length - 1) / (n - 1);\n  const muestra = candidatos.length <= n\n    ? candidatos\n    : Array.from({ length: n }, (_, i) => candidatos[Math.round(i * paso)]);\n  return fallar('ambiguo',\n    `Ese día tengo ${candidatos.length} espacios libres, por ejemplo: `\n    + `${muestra.map((s) => s.hora_inicio).join(', ')}. ¿A qué hora le sirve?`,\n    muestra);\n}\n\nconst elegido = candidatos[0];\nconst { slots, ...resto } = motor;   // slots es grande y ya no hace falta aguas abajo\nreturn [{\n  json: {\n    ...resto,                        // arrastra los datos del paciente que puso \"Validar reglas\"\n    ok: true, accion: 'agendar',\n    slot: elegido, slot_texto: enEspanol(elegido),\n    alternativas: [publico(elegido)],\n    // por si \"Confirmar y preparar\" tiene que ofrecer otro día\n    alternativas_todas: todos.slice(0, 40).map(publico),\n  },\n}];\n"
+      },
+      "id": "resolver",
+      "name": "Resolver slot pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "slot-ok-c",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "slot-ok",
+      "name": "¿Slot resuelto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA/values:batchGet?ranges=Citas!A%3AS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "releer",
+      "name": "Releer citas frescas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2192,
+        -224
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = ($input.first().json.valueRanges || [])[0] || {};\nconst filas = v.values || [];\nconst cab = (filas[0] || []).map((h) => String(h || '').trim());\nconst citas = filas.slice(1).map((f) => Object.fromEntries(cab.map((h, i) => [h, f[i] === undefined ? '' : f[i]])));\nreturn [{ json: { citas } }];"
+      },
+      "id": "preparar-frescas",
+      "name": "Preparar citas frescas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Última verificación antes de escribir: el espacio tiene que seguir libre.\r\n// Google Sheets no da atomicidad, así que este re-chequeo es la única defensa contra\r\n// una reserva duplicada. Suficiente para un demo; no para producción real.\r\nconst TZ = 'America/Costa_Rica';\r\n\r\nconst datos = $('Resolver slot pedido').first().json;\r\nconst entrada = $('Normalizar entrada').first().json;\r\nconst citas = $input.first().json.citas;   // viene de \"Preparar citas frescas\"\r\n\r\nconst txt = (v) => (v === undefined || v === null ? '' : String(v)).trim();\r\nconst aMin = (h) => {\r\n  const m = String(h || '').match(/^(\\d{1,2}):(\\d{2})/);\r\n  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;\r\n};\r\n\r\nconst slot = datos.slot;\r\nconst ini = aMin(slot.hora_inicio);\r\nconst fin = aMin(slot.hora_fin);\r\n\r\nconst chocando = citas.find((c) => txt(c.id_profesional) === slot.id_profesional\r\n  && txt(c.fecha) === slot.fecha\r\n  && ['Solicitada', 'Confirmada'].includes(txt(c.estado))\r\n  && ini < aMin(c.hora_fin) && fin > aMin(c.hora_inicio));\r\n\r\nif (chocando) {\r\n  return [{\r\n    json: {\r\n      ok: false, sigue_libre: false, accion: 'agendar', motivo: 'no_coincide', disponible: false,\r\n      interpretacion: datos.interpretacion, servicio: datos.servicio,\r\n      mensaje: 'Ese espacio se acaba de ocupar. Consulte la disponibilidad de nuevo para '\r\n        + 'ofrecerle los horarios que quedan.',\r\n      alternativas: [],\r\n    },\r\n  }];\r\n}\r\n\r\n// DM_03: un paciente no puede tener dos citas de tratamiento el mismo día. Se valida acá\r\n// y no en \"Validar reglas\" porque depende del espacio elegido, y contra la relectura\r\n// fresca de Citas para que cuente una cita que se acabe de crear.\r\nconst reglas = $('Validar reglas').first().json;\r\nconst mismoDia = reglas.id_paciente && citas.find((c) => txt(c.id_paciente) === txt(reglas.id_paciente)\r\n  && txt(c.fecha) === slot.fecha\r\n  && ['Solicitada', 'Confirmada'].includes(txt(c.estado)));\r\nif (mismoDia) {\r\n  const otroDia = (datos.alternativas_todas || []).filter((s) => s.fecha !== slot.fecha);\r\n  return [{\r\n    json: {\r\n      ok: false, sigue_libre: false, accion: 'agendar', motivo: 'dos_citas_mismo_dia', disponible: false,\r\n      interpretacion: datos.interpretacion, servicio: datos.servicio,\r\n      mensaje: `Ya tiene una cita ese día a las ${txt(mismoDia.hora_inicio)}. `\r\n        + 'La clínica no agenda dos tratamientos el mismo día. '\r\n        + (otroDia.length ? `Le puedo ofrecer ${otroDia[0].texto}.` : ''),\r\n      alternativas: otroDia.slice(0, 6),\r\n    },\r\n  }];\r\n}\r\n\r\n// ---------- ids nuevos ----------\r\nconst siguiente = (lista, prefijo, ancho) => {\r\n  const nums = lista.map((v) => parseInt(txt(v).replace(prefijo, ''), 10)).filter((n) => !isNaN(n));\r\n  return prefijo + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(ancho, '0');\r\n};\r\nconst tablas = $('Preparar datos').first().json;\r\nconst actividades = tablas.actividades;\r\nconst pacientes = tablas.pacientes;\r\n\r\n// El calendario del profesional que atiende. Va acá porque el nodo de Calendar está al\r\n// final de la cadena y ahí $json ya es la respuesta del append de Actividades.\r\nconst profesional = (tablas.profesionales || []).find((p) => txt(p.id_profesional) === slot.id_profesional);\r\nconst idCalendar = profesional ? txt(profesional.id_calendar) : '';\r\n\r\nconst idCita = siguiente(citas.map((c) => c.id_cita), 'CITA-', 4);\r\nconst idPaciente = datos.id_paciente || siguiente(pacientes.map((p) => p.id_paciente), 'PAC-', 4);\r\nconst idActividad = siguiente(actividades.map((a) => a.id_actividad), 'ACT-', 5);\r\nconst ahora = DateTime.now().setZone(TZ);\r\n\r\n// El correo del paciente para el aviso de la cita. Gana el que acaba de dar por WhatsApp\r\n// sobre el que ya estaba en la hoja: si lo dictó de nuevo es porque el viejo no servía.\r\n// Puede quedar vacío y no pasa nada: el correo es un aviso, nunca un requisito para\r\n// agendar. `Fila paciente` lo escribe en Pacientes!D para las próximas veces.\r\nconst emailPaciente = txt(entrada.email) || txt((datos.paciente_row || {}).email);\r\n\r\n// Datos de la sede para el correo. Salen de Config, que ya se leyó en \"Preparar datos\":\r\n// el workflow de correos no vuelve a tocar Sheets.\r\nconst sede = (tablas.config || [])[0] || {};\r\n\r\nreturn [{\r\n  json: {\r\n    ...datos,\r\n    ok: true,\r\n    sigue_libre: true,\r\n    id_cita: idCita,\r\n    id_paciente: idPaciente,\r\n    id_actividad: idActividad,\r\n    id_calendar: idCalendar,\r\n    // Costa Rica es UTC-6 todo el año (no hay horario de verano), así que el offset se\r\n    // pone explícito en vez de confiar en cómo interprete n8n una fecha sin zona.\r\n    inicio_iso: `${slot.fecha}T${slot.hora_inicio}:00-06:00`,\r\n    fin_iso: `${slot.fecha}T${slot.hora_fin}:00-06:00`,\r\n    fecha_creacion: ahora.toFormat('yyyy-MM-dd HH:mm'),\r\n    nombre_paciente: datos.nombre_paciente || txt(entrada.nombre_paciente) || 'Paciente WhatsApp',\r\n    email_paciente: emailPaciente,\r\n    sede: {\r\n      nombre: txt(sede.nombre),\r\n      direccion: txt(sede.direccion),\r\n      link_maps: txt(sede.link_maps),\r\n      telefono: txt(sede.telefono),\r\n      whatsapp: txt(sede.whatsapp),\r\n    },\r\n  },\r\n}];\r\n"
+      },
+      "id": "confirmar",
+      "name": "Confirmar y preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "libre-c",
+              "leftValue": "={{ $json.sigue_libre }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "libre",
+      "name": "¿Sigue libre?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2848,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// La cita nace SOLICITADA: la clínica la confirma por WhatsApp 24 h antes (DM_03).\n//\n// Va como arreglo de celdas en el orden de las columnas A:R, no como objeto, porque se\n// escribe con values:append y valueInputOption=RAW. Con el nodo normal de Sheets, Google\n// interpreta \"08:30\" como una hora y lo devuelve como \"8:30\", que no cuadra con el resto\n// de la hoja.\nconst d = $('Confirmar y preparar').first().json;\nreturn [{\n  json: {\n    valores: [[\n      d.id_cita,\n      d.id_paciente,\n      d.slot.id_profesional,\n      d.id_servicio,\n      '',                              // id_tratamiento\n      d.id_oportunidad || '',\n      'SEDE-01',\n      d.slot.fecha,\n      d.slot.hora_inicio,\n      d.slot.hora_fin,\n      'Solicitada',\n      'Bot WhatsApp',\n      'FALSE',                         // recordatorio_enviado\n      'FALSE',                         // confirmada_por_paciente\n      'Bot',\n      d.fecha_creacion,\n      `Agendada por el bot: ${d.servicio}`,\n      '',                              // id_evento_calendar\n    ]],\n  },\n}];"
+      },
+      "id": "fila-cita",
+      "name": "Fila cita",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3264,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA/values/Citas!A%3AR:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: $json.valores }) }}",
+        "options": {}
+      },
+      "id": "esc-cita",
+      "name": "Escribir cita",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3440,
+        -416
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Se reescriben solo los campos seguros; para un paciente que ya existe son los\r\n// mismos valores que ya tenía, así que es un no-op.\r\nconst d = $('Confirmar y preparar').first().json;\r\nconst p = d.paciente_row || {};\r\nreturn [{\r\n  json: {\r\n    id_paciente: d.id_paciente,\r\n    nombre_completo: d.nombre_paciente,\r\n    telefono: d.telefono,\r\n    // Pacientes!D. `email_paciente` ya viene resuelto (el que dictó ahora, o el que ya\r\n    // estaba en la hoja), así que para un paciente que no dio correo esto reescribe el\r\n    // mismo valor y nunca lo borra.\r\n    email: d.email_paciente || p.email || '',\r\n    sede_preferida: p.sede_preferida || 'SEDE-01',\r\n    estado: p.estado || 'Nuevo',\r\n    fecha_registro: p.fecha_registro || d.fecha_creacion.slice(0, 10),\r\n    canal_origen: p.canal_origen || 'WhatsApp',\r\n    consentimiento_datos: p.consentimiento_datos || 'TRUE',\r\n  },\r\n}];"
+      },
+      "id": "fila-pac",
+      "name": "Fila paciente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3648,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Pacientes",
+          "cachedResultName": "Pacientes"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "id_paciente"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "esc-pac",
+      "name": "Guardar paciente",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3792,
+        -192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Confirmar y preparar').first().json;\nreturn [{\n  json: {\n    id_actividad: d.id_actividad,\n    fecha_hora: d.fecha_creacion,\n    id_paciente: d.id_paciente,\n    id_oportunidad: d.id_oportunidad || '',\n    id_cita: d.id_cita,\n    canal: 'WhatsApp',\n    tipo: 'Confirmación',\n    direccion: 'Entrante',\n    resumen: `Cita solicitada por el bot: ${d.servicio}, ${d.slot.fecha} ${d.slot.hora_inicio}`,\n    intencion: 'Agendar',\n    sentimiento: 'Positivo',\n    generado_por: 'Bot',\n    requiere_seguimiento: 'FALSE',\n    url_documento: '',\n  },\n}];"
+      },
+      "id": "fila-act",
+      "name": "Fila actividad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3424,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Actividades",
+          "cachedResultName": "Actividades"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "esc-act",
+      "name": "Escribir actividad",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3216,
+        -224
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "hay-opp-c",
+              "leftValue": "={{ $('Confirmar y preparar').first().json.id_oportunidad ? 'si' : 'no' }}",
+              "rightValue": "si",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "hay-opp",
+      "name": "¿Hay oportunidad?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4064,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Confirmar y preparar').first().json;\nreturn [{\n  json: {\n    id_oportunidad: d.id_oportunidad,\n    id_paciente: d.id_paciente,\n    etapa: 'Cita agendada',\n    fecha_ultima_interaccion: d.fecha_creacion,\n  },\n}];"
+      },
+      "id": "fila-opp",
+      "name": "Fila oportunidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3984,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA",
+          "cachedResultName": "CRM - demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Oportunidades",
+          "cachedResultName": "Oportunidades"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "id_oportunidad"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "esc-opp",
+      "name": "Actualizar oportunidad",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4160,
+        -400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Confirmar y preparar').first().json.id_calendar }}"
+        },
+        "start": "={{ $('Confirmar y preparar').first().json.inicio_iso }}",
+        "end": "={{ $('Confirmar y preparar').first().json.fin_iso }}",
+        "additionalFields": {
+          "description": "={{ 'id_cita: ' + $('Confirmar y preparar').first().json.id_cita + '\\nid_paciente: ' + $('Confirmar y preparar').first().json.id_paciente + '\\ntelefono: ' + $('Confirmar y preparar').first().json.telefono }}",
+          "summary": "={{ $('Confirmar y preparar').first().json.servicio }} — {{ $('Confirmar y preparar').first().json.nombre_paciente }}"
+        }
+      },
+      "id": "calendar",
+      "name": "Crear evento en Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        3632,
+        -416
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "PTFrwFEcqS8cEEKT",
+          "name": "Google Calendar account"
+        }
+      },
+      "disabled": false,
+      "onError": "continueRegularOutput",
+      "notes": "Paso 3. Para activarlo: crear los 4 calendarios, pegar sus ids en Profesionales!I2:I5, crear la credencial googleCalendarOAuth2Api y habilitar este nodo Y \"Guardar id del evento\" a la vez.",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA/values/Citas!R{{ $('Escribir cita').first().json.updates.updatedRange.match(/(\\d+)/)[0] }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ $json.id ]] }) }}",
+        "options": {}
+      },
+      "id": "guardar-evento",
+      "name": "Guardar id del evento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3808,
+        -400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      },
+      "disabled": false,
+      "onError": "continueRegularOutput",
+      "notes": "Escribe el id del evento en Citas.id_evento_calendar (columna R) para que reprogramar y cancelar puedan actualizar el mismo evento en vez de duplicarlo.",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Confirmar y preparar').first().json;\r\nconst loc = $('Localizar cita').first().json;\r\n\r\n// Las citas que YA tenía ANTES de esta (el contexto se calculó al entrar, antes de\r\n// escribir). Se le recuerdan al confirmar para que no se le junten dos sin darse cuenta.\r\nconst previas = loc.citas_proximas || [];\r\nconst recordatorio = previas.length\r\n  ? ` Además de esta, ya tenía ${previas.length === 1 ? 'una cita' : `${previas.length} citas`}: `\r\n    + `${previas.map((c) => `${c.servicio}, ${c.texto}`).join('; ')}.`\r\n  : '';\r\n\r\nreturn [{\r\n  json: {\r\n    ok: true,\r\n    accion: 'agendar',\r\n    agendada: true,\r\n    disponible: true,\r\n    motivo: null,\r\n    interpretacion: d.interpretacion,\r\n    servicio: d.servicio,\r\n    id_cita: d.id_cita,\r\n    cita: {\r\n      texto: d.slot_texto,\r\n      fecha: d.slot.fecha,\r\n      hora_inicio: d.slot.hora_inicio,\r\n      hora_fin: d.slot.hora_fin,\r\n      id_profesional: d.slot.id_profesional,\r\n      profesional: d.slot.profesional,\r\n    },\r\n    alternativas: [],\r\n    mensaje: `Cita solicitada para ${d.slot_texto}. Queda registrada como SOLICITADA: `\r\n      + `la clínica la confirma por WhatsApp 24 horas antes.${recordatorio}`,\r\n    paciente_existente: loc.paciente_existente === true,\r\n    valoracion: loc.valoracion || { estado: 'ninguna', texto: '' },\r\n    citas_proximas: previas,\r\n    aviso: recordatorio.trim(),\r\n    // Payload para \"Enviar correo de la cita\". Si el paciente no dio correo, `email` va\r\n    // vacío y el sub-workflow corta solo: la cita ya quedó escrita igual.\r\n    correo: {\r\n      tipo: 'nueva',\r\n      email: d.email_paciente || '',\r\n      nombre_paciente: d.nombre_paciente,\r\n      servicio: d.servicio,\r\n      texto_cita: d.slot_texto,\r\n      profesional: d.slot.profesional,\r\n      id_cita: d.id_cita,\r\n      nota: '',\r\n      texto_anterior: '',\r\n      sede_nombre: (d.sede || {}).nombre || '',\r\n      sede_direccion: (d.sede || {}).direccion || '',\r\n      sede_link_maps: (d.sede || {}).link_maps || '',\r\n      sede_telefono: (d.sede || {}).telefono || '',\r\n      sede_whatsapp: (d.sede || {}).whatsapp || '',\r\n    },\r\n  },\r\n}];"
+      },
+      "id": "resp-agendada",
+      "name": "Respuesta agendada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4528,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Único punto de salida del sub-workflow. Garantiza la forma del contrato: nunca vacío,\r\n// siempre con mensaje y con alternativas.\r\nconst j = $input.first().json;\r\n\r\n// Un profesional por fecha+hora, acá y no en cada rama: al paciente le importa la hora,\r\n// no con quién. Sin esto una valoración —que la hacen los cuatro— se ofrecería como\r\n// \"9:00 con Dulce María\" y \"9:00 con Carolina\" como si fueran dos espacios distintos.\r\nconst vistos = new Set();\r\nconst alternativas = (Array.isArray(j.alternativas) ? j.alternativas : []).filter((a) => {\r\n  const clave = `${a.fecha}|${a.hora_inicio}`;\r\n  if (vistos.has(clave)) return false;\r\n  vistos.add(clave);\r\n  return true;\r\n});\r\nreturn [{\r\n  json: {\r\n    ok: j.ok !== false,\r\n    interpretacion: j.interpretacion || 'lo más próximo disponible',\r\n    servicio: j.servicio || '',\r\n    disponible: j.disponible === true,\r\n    agendada: j.agendada === true,\r\n    motivo: j.motivo || null,\r\n    // cuando la regla de valoración previa bloquea, el agente tiene que volver a\r\n    // consultar disponibilidad con ESTE servicio. Va en null cuando el paciente YA tiene\r\n    // la valoración agendada: ahí no hay nada que consultar, solo que llegue el día.\r\n    id_servicio_sugerido: j.id_servicio_sugerido || null,\r\n    id_cita: j.id_cita || null,\r\n    cita: j.cita || null,\r\n    alternativas,\r\n    mensaje: j.mensaje || 'No pude resolver la consulta de agenda.',\r\n    // Contexto del paciente. Este nodo es un whitelist: lo que no se nombre acá, no sale.\r\n    // `paciente_existente` y `valoracion` son HECHOS que el modelo no puede deducir de\r\n    // `catalogo_servicios` —esa hoja habla del servicio, no de la persona— y `aviso` es\r\n    // la explicación ya redactada de por qué se puede o no agendar.\r\n    paciente_existente: j.paciente_existente === true,\r\n    valoracion: j.valoracion || { estado: 'ninguna', texto: '' },\r\n    citas_proximas: Array.isArray(j.citas_proximas) ? j.citas_proximas : [],\r\n    aviso: j.aviso || '',\r\n    // `aviso` es lo que hay que decir sin que lo pidan; `nota_valoracion` es lo que hay\r\n    // que decir cuando el paciente pregunta por la regla. Va siempre poblado.\r\n    nota_valoracion: j.nota_valoracion || '',\r\n  },\r\n}];"
+      },
+      "id": "respuesta",
+      "name": "Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4752,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Agenda — disponibilidad y citas\n\nMotor de agenda de la Clínica Dulce María. Lo llama el agente `Agente conversión y agenda`\n(`GmGt3g3krJCoDli0`) a través de dos herramientas `toolWorkflow`: `consultar_disponibilidad`\ny `agendar_cita`.\n\n**Entradas** (`accion`, `id_servicio`, `fecha_texto`, `telefono`, `nombre_paciente`).\n`fecha_texto` son **las palabras del paciente sin traducir** (\"el martes en la tarde\").\nNo hay campo de fecha ya resuelta a propósito: si existiera, el modelo la llenaría con su\npropia aritmética y habría dos fuentes para el mismo dato. Quien resuelve la fecha es el\nCode node `Interpretar la fecha`, anclado en la hora real de Costa Rica.\n\n**Fuente de verdad:** el Sheet `CRM - demo`, tabs `Citas` y `Profesionales`.\n\n### Reglas implementadas (DM_01 y DM_03)\n\n- Domingos y feriados cerrado (tab `Feriados`).\n- El último espacio de cada día termina **una hora antes del cierre** de la sede.\n- Nada de más de 90 minutos después de las 4:00 p. m. entre semana, ni de las 11:00 los sábados.\n- 2 espacios diarios reservados para urgencias (10:00 y 15:00, en PROF-01).\n- Todo paciente nuevo pasa primero por una **valoración inicial**. Se valida solo al\n  agendar, no al consultar: consultar informa, agendar bloquea.\n- Un paciente no puede tener dos citas de tratamiento el mismo día.\n- Las citas nacen con `estado = Solicitada`; la clínica confirma 24 h antes.\n\nLas reglas de **día por especialidad** (endodoncia martes y jueves, ortodoncia L/X/V por la\nmañana, implantes miércoles tarde o sábados) **no están codificadas**: salen solas del cruce\n`Servicios.profesionales_habilitados` × `Profesionales.dias_atencion`. Para cambiarlas se\nedita el Sheet, no este workflow.\n\n### Malla de espacios\n\nLos inicios se generan **cada `duracion_min`**, anclados al arranque de la ventana del\nprofesional: una limpieza de 45 min da 08:00, 08:45, 09:30…; una valoración de 30 da 08:00,\n08:30… La agenda se ve distinta según el servicio. Si el día que pidió el paciente queda\nvacío, hay una segunda pasada con malla de 15 min para no decir \"no hay\" cuando sí hay.\n\n### Contrato de salida\n\nLa herramienta **nunca devuelve vacío ni un \"no hay\" pelado** — un resultado vacío es lo que\nhace alucinar al modelo. Siempre salen `mensaje` redactado y `alternativas`. Cuando una regla\nbloquea, `motivo` es un valor fijo: `servicio_no_disponible`, `requiere_valoracion_previa`,\n`dia_no_habilitado`, `ambiguo`, `no_coincide`, `dos_citas_mismo_dia`, `fuera_de_horario`.\n\n### Limitaciones conocidas\n\n- **Google Sheets no da atomicidad.** El nodo `Confirmar y preparar` re-verifica que el\n  espacio siga libre justo antes de escribir. Alcanza para un demo con un probador; no para\n  producción real.\n- **`Crear evento en Calendar` está deshabilitado.** Falta crear los 4 calendarios, pegar sus\n  ids en `Profesionales.id_calendar` y crear la credencial `googleCalendarOAuth2Api` — la que\n  existe (`trignia automations account`) es de Sheets y no tiene el scope de Calendar.\n- **`Webhook de prueba` (`/agenda-test`) es solo para probar el motor aislado**, sin pasar por\n  WhatsApp. Deshabilitalo antes de dar el demo.\n- La Dra. Vargas atiende \"sábados alternos\" según DM_01; acá figura todos los sábados porque\n  el modelo de datos no lo expresa.\n",
+        "height": 400,
+        "width": 900,
+        "color": 4
+      },
+      "id": "sticky",
+      "name": "Documentación",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        -560
+      ]
+    },
+    {
+      "id": "localizar-cita",
+      "name": "Localizar cita",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        120
+      ],
+      "parameters": {
+        "jsCode": "// De qué cita habla el paciente. Es la puerta de entrada de confirmar, cancelar y reagendar,\n// y además decide con qué servicio calcula espacios el motor cuando se reagenda.\n//\n// Dos vías de entrada, a propósito:\n//   · con `token`  → viene de un enlace del correo e identifica una cita concreta.\n//   · sin `token`  → viene del agente por WhatsApp y se resuelve por teléfono.\n//\n// Ninguna de las dos le pide `id_cita` al modelo: cada dato que el modelo no tiene que\n// llenar es un dato que no puede inventar. Mismo criterio que con `id_oportunidad`.\n//\n// Para consultar y agendar NO localiza una cita, pero sí arma el CONTEXTO del paciente:\n// si ya es conocido, en qué estado está su valoración inicial y qué citas tiene por\n// delante. Ese contexto es lo que faltaba. Sin él (2026-08-28, exec 27517) el modelo\n// deducía si hacía falta valoración leyendo la columna `requiere_valoracion` del\n// servicio —que habla del SERVICIO, no de la persona— y le prometía a un paciente cosas\n// que \"agendar\" después rechazaba. Los datos ya están en memoria: no cuesta ni una\n// lectura más de Sheets.\nconst GESTION = ['confirmar', 'cancelar', 'reagendar'];\nconst ACTIVAS = ['Solicitada', 'Confirmada', 'Reprogramada'];\nconst VALORACIONES = ['SRV-001', 'SRV-016'];\nconst TZ = 'America/Costa_Rica';\n\n// Va DESPUÉS de \"Interpretar la fecha\" para poder desambiguar \"la del jueves\" reusando el\n// resolver, así que los datos del CRM se piden por nombre y no por $input.\nconst datos = $('Preparar datos').first().json;\nconst entrada = $('Normalizar entrada').first().json;\nconst pedido = $('Interpretar la fecha').first().json;\nconst accion = String(entrada.accion || '').trim();\n\nconst txt = (v) => (v === undefined || v === null ? '' : String(v)).trim();\n// La hoja mezcla \"+506 8888-9999\" y \"(+506) 8888-9999\": se compara solo por dígitos.\nconst digitos = (t) => txt(t).replace(/\\D/g, '').replace(/^506/, '');\n\nconst hoy = DateTime.now().setZone(TZ).toFormat('yyyy-MM-dd');\n\nconst enEspanol = (c) => {\n  const d = DateTime.fromISO(txt(c.fecha), { zone: TZ }).setLocale('es');\n  const [hh, mm] = txt(c.hora_inicio).split(':').map(Number);\n  const h12 = hh % 12 === 0 ? 12 : hh % 12;\n  return `${d.toFormat(\"cccc d 'de' LLLL\")}, ${h12}:${String(mm).padStart(2, '0')}`\n    + `${hh < 12 ? ' a. m.' : ' p. m.'}`;\n};\nconst publico = (c) => ({\n  texto: enEspanol(c), fecha: txt(c.fecha), hora_inicio: txt(c.hora_inicio),\n  hora_fin: txt(c.hora_fin), id_profesional: txt(c.id_profesional), id_cita: txt(c.id_cita),\n});\nconst porFechaHora = (a, b) => (txt(a.fecha) + txt(a.hora_inicio))\n  .localeCompare(txt(b.fecha) + txt(b.hora_inicio));\n\nconst nombreServicio = (id) => {\n  const s = datos.servicios.find((x) => txt(x.id_servicio) === txt(id));\n  return s ? txt(s.nombre) : txt(id);\n};\n// Las citas que se le recuerdan al paciente llevan el nombre del servicio: \"su limpieza\n// del sábado\" le sirve; \"su CITA-0031\" no le dice nada a nadie.\nconst citaPublica = (c) => ({\n  texto: enEspanol(c), fecha: txt(c.fecha), hora_inicio: txt(c.hora_inicio),\n  id_cita: txt(c.id_cita), estado: txt(c.estado), servicio: nombreServicio(c.id_servicio),\n});\n\nconst buscarPaciente = (tel) => (tel\n  ? datos.pacientes.find((p) => digitos(p.telefono) && digitos(p.telefono) === tel) || null\n  : null);\n\n// Contexto del paciente, idéntico para todas las acciones. Es lo que le permite al motor\n// explicar POR QUÉ deja o no deja agendar, en vez de dejar que el modelo lo adivine.\nfunction contexto(pac) {\n  if (!pac) {\n    return {\n      paciente_existente: false,\n      valoracion: { estado: 'ninguna', texto: '' },\n      citas_proximas: [],\n    };\n  }\n  const mias = datos.citas.filter((c) => txt(c.id_paciente) === txt(pac.id_paciente));\n  const proximas = mias\n    .filter((c) => ACTIVAS.includes(txt(c.estado)) && txt(c.fecha) >= hoy)\n    .sort(porFechaHora);\n\n  // Solo una valoración YA ATENDIDA levanta la regla del servicio. Una agendada a futuro\n  // todavía no, y la diferencia importa porque el mensaje cambia: \"usted ya fue valorado\"\n  // no es lo mismo que \"su valoración es el jueves, el tratamiento va después de esa\".\n  const vals = mias.filter((c) => VALORACIONES.includes(txt(c.id_servicio)));\n  const realizada = vals.find((c) => txt(c.estado) === 'Completada'\n    || (ACTIVAS.includes(txt(c.estado)) && txt(c.fecha) < hoy));\n  const agendada = vals\n    .filter((c) => ACTIVAS.includes(txt(c.estado)) && txt(c.fecha) >= hoy)\n    .sort(porFechaHora)[0];\n\n  return {\n    paciente_existente: true,\n    valoracion: {\n      estado: realizada ? 'realizada' : (agendada ? 'agendada' : 'ninguna'),\n      texto: realizada ? enEspanol(realizada) : (agendada ? enEspanol(agendada) : ''),\n    },\n    citas_proximas: proximas.map(citaPublica),\n  };\n}\n\n// Consultar y agendar no localizan una cita: siguen de largo con el servicio que pidió el\n// modelo, pero llevándose el contexto del paciente.\nif (!GESTION.includes(accion)) {\n  const pac = buscarPaciente(digitos(entrada.telefono));\n  return [{\n    json: {\n      ok: true,\n      accion,\n      id_servicio: txt(entrada.id_servicio),\n      cita: null,\n      paciente: pac ? { ...pac, fila: pac.row_number } : null,\n      ...contexto(pac),\n    },\n  }];\n}\n\nconst fallar = (motivo, mensaje, opciones = []) => [{\n  json: { ok: false, accion, motivo, mensaje, disponible: false, alternativas: opciones, cita: null },\n}];\n\nconst token = txt(entrada.token);\nlet cita = null;\nlet paciente = null;\n\nif (token) {\n  cita = datos.citas.find((c) => txt(c.token_gestion) === token) || null;\n  if (!cita) {\n    return fallar('token_invalido',\n      'Este enlace ya no es válido. Escríbanos por WhatsApp y le ayudamos con su cita.');\n  }\n  if (!ACTIVAS.includes(txt(cita.estado))) {\n    return fallar('cita_no_activa',\n      `Esa cita figura como ${txt(cita.estado).toLowerCase()}, así que no hay nada pendiente por hacer.`);\n  }\n  paciente = datos.pacientes.find((p) => txt(p.id_paciente) === txt(cita.id_paciente)) || null;\n} else {\n  paciente = buscarPaciente(digitos(entrada.telefono));\n  if (!paciente) {\n    return fallar('sin_citas',\n      'No encuentro ninguna cita a su nombre. ¿Quiere que le busque un espacio?');\n  }\n\n  let suyas = datos.citas\n    .filter((c) => txt(c.id_paciente) === txt(paciente.id_paciente)\n      && ACTIVAS.includes(txt(c.estado)) && txt(c.fecha) >= hoy)\n    .sort(porFechaHora);\n\n  if (!suyas.length) {\n    return fallar('sin_citas',\n      'No tiene citas próximas agendadas. ¿Quiere que le busque un espacio?');\n  }\n\n  // Si el paciente dijo de cuál habla (\"la del jueves\"), se filtra por lo que entendió el\n  // resolver de fechas. Reusa esa pieza en vez de repetir un mini-parser acá.\n  if (suyas.length > 1 && pedido.dia_especifico) {\n    const delDia = suyas.filter((c) => txt(c.fecha) === pedido.desde);\n    if (delDia.length) suyas = delDia;\n  }\n\n  // Se devuelven TODAS, no las primeras N. Una lista cortada hace que el modelo afirme que\n  // algo no existe: es el bug del 2026-08-07 con otro disfraz.\n  if (suyas.length > 1) {\n    const cuál = suyas.length === 2 ? '¿Cuál de las dos?' : '¿Cuál de ellas?';\n    return fallar('ambiguo',\n      `Tiene ${suyas.length} citas próximas: ${suyas.map(enEspanol).join('; ')}. ${cuál}`,\n      suyas.map(publico));\n  }\n  cita = suyas[0];\n}\n\nconst servicio = datos.servicios.find((s) => txt(s.id_servicio) === txt(cita.id_servicio));\nconst profesional = datos.profesionales.find((p) => txt(p.id_profesional) === txt(cita.id_profesional));\n\nreturn [{\n  json: {\n    ok: true,\n    accion,\n    // Al reagendar, el servicio sale de la CITA, no de lo que diga el modelo: se mueve la\n    // misma cita, no se inventa otra. \"Calcular slots libres\" lee este campo.\n    id_servicio: txt(cita.id_servicio),\n    cita: {\n      ...cita,\n      fila: cita.row_number,\n      texto: enEspanol(cita),\n      servicio: servicio ? txt(servicio.nombre) : txt(cita.id_servicio),\n      duracion_min: servicio ? (parseInt(txt(servicio.duracion_min), 10) || 30) : 30,\n      profesional: profesional ? txt(profesional.nombre) : txt(cita.id_profesional),\n      id_calendar: profesional ? txt(profesional.id_calendar) : '',\n    },\n    paciente: paciente ? { ...paciente, fila: paciente.row_number } : null,\n    ...contexto(paciente),\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "-cita-localizada-",
+      "name": "¿Cita localizada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1080,
+        120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "¿Cita localizada?",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "-qu-acci-n-",
+      "name": "¿Qué acción?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1620,
+        120
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "consultar_disponibilidad",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "consultar_disponibilidad",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "consultar_disponibilidad"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "agendar",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "agendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "agendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "confirmar",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "confirmar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "confirmar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cancelar",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "cancelar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancelar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "reagendar",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "reagendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reagendar"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "-agendar-o-reagendar-",
+      "name": "¿Agendar o reagendar?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2000,
+        -120
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "agendar",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "agendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "agendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "reagendar",
+                    "leftValue": "={{ $('Normalizar entrada').first().json.accion }}",
+                    "rightValue": "reagendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reagendar"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "preparar-gesti-n",
+      "name": "Preparar gestión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        420
+      ],
+      "parameters": {
+        "jsCode": "// Un solo nodo para confirmar, cancelar y reagendar. Están juntos a propósito: la cola que\n// sigue (escribir en Citas, mover el evento de Calendar, registrar la actividad, responder)\n// es la misma para las tres, y con tres nodos distintos esa cola no podría referenciar al\n// que corrió. Acá cada acción arma la misma forma:\n//\n//   { actualizaciones[], borrar_evento, crear_evento, actividad, respuesta }\nconst TZ = 'America/Costa_Rica';\nconst CARGO = 10000;\n\nconst loc = $('Localizar cita').first().json;\nconst entrada = $('Normalizar entrada').first().json;\nconst c = loc.cita;\nconst f = c.fila;\nconst ahora = DateTime.now().setZone(TZ);\nconst sello = ahora.toFormat('yyyy-MM-dd HH:mm');\nconst notaPrevia = String(c.notas || '').trim();\n\n// Datos para el correo de aviso. La sede sale de Config, que ya se leyó en \"Preparar\n// datos\": el sub-workflow de correos no vuelve a tocar Sheets. El correo del paciente\n// sale de su ficha; si está vacío, el sub-workflow corta solo y la gestión igual se hizo.\nconst sede = ($('Preparar datos').first().json.config || [])[0] || {};\nconst correoBase = {\n  email: String((loc.paciente || {}).email || '').trim(),\n  nombre_paciente: String((loc.paciente || {}).nombre_completo || '').trim(),\n  servicio: c.servicio,\n  id_cita: c.id_cita,\n  nota: '',\n  texto_anterior: '',\n  sede_nombre: String(sede.nombre || '').trim(),\n  sede_direccion: String(sede.direccion || '').trim(),\n  sede_link_maps: String(sede.link_maps || '').trim(),\n  sede_telefono: String(sede.telefono || '').trim(),\n  sede_whatsapp: String(sede.whatsapp || '').trim(),\n};\n\nconst base = {\n  id_cita: c.id_cita,\n  fila: f,\n  borrar_evento: null,\n  crear_evento: null,\n  cargo_por_cancelacion_tardia: false,\n  // `tipo` vacío = no se manda correo. Es el caso de confirmar: por decisión del\n  // proyecto la confirmación vive ÚNICAMENTE en WhatsApp y no genera correo.\n  correo: { ...correoBase, tipo: '', texto_cita: c.texto, profesional: c.profesional },\n};\nconst citaPublica = (t, s) => ({\n  texto: t, fecha: s.fecha, hora_inicio: s.hora_inicio, hora_fin: s.hora_fin,\n  id_profesional: s.id_profesional, profesional: s.profesional,\n});\n\n// ---------------------------------------------------------------- confirmar\nif (loc.accion === 'confirmar') {\n  return [{ json: { ...base, accion: 'confirmar',\n    // K = estado, N = confirmada_por_paciente\n    actualizaciones: [\n      { range: `Citas!K${f}`, values: [['Confirmada']] },\n      { range: `Citas!N${f}`, values: [['TRUE']] },\n    ],\n    actividad: {\n      tipo: 'Confirmación',\n      resumen: `El paciente confirmó su cita de ${c.servicio} del ${c.fecha} a las ${c.hora_inicio}`,\n      intencion: 'Agendar',\n    },\n    respuesta: {\n      ok: true, motivo: null, disponible: true, agendada: false,\n      servicio: c.servicio, id_cita: c.id_cita,\n      cita: citaPublica(c.texto, c),\n      mensaje: `Listo, su cita de ${c.servicio} quedó confirmada para ${c.texto} con ${c.profesional}. `\n        + 'Le esperamos. Si necesita moverla, avísenos con al menos 24 horas de anticipación.',\n    },\n  } }];\n}\n\n// ---------------------------------------------------------------- cancelar\n// DM_04, textual: \"Las citas se pueden cancelar o reprogramar sin costo hasta veinticuatro\n// horas antes de la hora agendada. Las cancelaciones con menos de veinticuatro horas de\n// aviso generan un cargo de 10.000 colones, que se cobra en la siguiente cita.\"\n//\n// La cita se cancela IGUAL aunque falten menos de 24 h: negarse sería peor que el cargo,\n// porque el paciente no va a ir de todos modos y la clínica pierde el espacio sin saberlo.\n// Acá solo se informa. No se cobra nada ni se lleva la cuenta de las tres ausencias.\nif (loc.accion === 'cancelar') {\n  const horas = DateTime.fromISO(`${c.fecha}T${c.hora_inicio}`, { zone: TZ })\n    .diff(ahora, 'hours').hours;\n  const tardia = horas < 24;\n  const nota = `${notaPrevia} | Cancelada por el paciente el ${sello}`\n    + (tardia ? ` (menos de 24 h: cargo de ${CARGO.toLocaleString('es-CR')} colones)` : ' (sin cargo)');\n\n  return [{ json: { ...base, accion: 'cancelar',\n    cargo_por_cancelacion_tardia: tardia,\n    correo: {\n      ...correoBase,\n      tipo: 'cancelada',\n      texto_cita: c.texto,\n      profesional: c.profesional,\n      nota: tardia\n        ? `Como faltaban menos de 24 horas para la cita, aplica el cargo de `\n          + `${CARGO.toLocaleString('es-CR')} colones que la clínica cobra en su siguiente visita.`\n        : '',\n    },\n    actualizaciones: [\n      { range: `Citas!K${f}`, values: [['Cancelada']] },\n      { range: `Citas!Q${f}`, values: [[nota.trim()]] },\n    ],\n    borrar_evento: c.id_evento_calendar && c.id_calendar\n      ? { id: c.id_evento_calendar, calendar: c.id_calendar } : null,\n    actividad: {\n      tipo: 'Seguimiento',\n      resumen: `Cita ${c.id_cita} cancelada por el paciente${tardia ? ' con menos de 24 h de aviso' : ''}`,\n      intencion: 'Reprogramar',\n    },\n    respuesta: {\n      ok: true, motivo: tardia ? 'cancelada_con_cargo' : null, disponible: false, agendada: false,\n      servicio: c.servicio, id_cita: c.id_cita,\n      cita: citaPublica(c.texto, c),\n      mensaje: `Cancelé su cita de ${c.servicio} del ${c.texto}.`\n        + (tardia\n          ? ` Como faltaban menos de 24 horas, aplica el cargo de ${CARGO.toLocaleString('es-CR')} `\n            + 'colones que la clínica cobra en la siguiente cita.'\n          : ' No tiene ningún cargo.')\n        + ' Cuando quiera volver a agendar, con gusto le busco un espacio.',\n    },\n  } }];\n}\n\n// ---------------------------------------------------------------- reagendar\n// Se MUEVE la misma fila en vez de cancelar y crear otra: así el id_cita y el token del\n// correo siguen sirviendo, y el histórico queda en `notas` y en Actividades. `Reprogramada`\n// ya existe en los enums de Config!R, no hubo que inventar un estado.\n//\n// El evento de Calendar se borra y se recrea en vez de moverse: si cambió el profesional\n// cambió el calendario, y mover un evento entre calendarios no es un PATCH.\nconst resuelto = $input.first().json;    // viene de \"Resolver slot pedido\"\nconst s = resuelto.slot;\nconst prof = $('Preparar datos').first().json.profesionales\n  .find((p) => String(p.id_profesional || '').trim() === s.id_profesional);\nconst calNuevo = prof ? String(prof.id_calendar || '').trim() : '';\n\nreturn [{ json: { ...base, accion: 'reagendar',\n  correo: {\n    ...correoBase,\n    tipo: 'reprogramada',\n    texto_cita: resuelto.slot_texto,\n    profesional: s.profesional,\n    texto_anterior: c.texto,\n  },\n  actualizaciones: [\n    { range: `Citas!C${f}`, values: [[s.id_profesional]] },\n    // H fecha, I hora_inicio, J hora_fin, K estado: contiguas, una sola escritura\n    { range: `Citas!H${f}:K${f}`, values: [[s.fecha, s.hora_inicio, s.hora_fin, 'Reprogramada']] },\n    // vuelve a requerir confirmación y a entrar en el recordatorio del día anterior\n    { range: `Citas!M${f}:N${f}`, values: [['FALSE', 'FALSE']] },\n    { range: `Citas!Q${f}`, values: [[`${notaPrevia} | Reprogramada desde ${c.fecha} ${c.hora_inicio} el ${sello}`.trim()]] },\n  ],\n  borrar_evento: c.id_evento_calendar && c.id_calendar\n    ? { id: c.id_evento_calendar, calendar: c.id_calendar } : null,\n  crear_evento: calNuevo ? {\n    calendar: calNuevo,\n    // Costa Rica es UTC-6 todo el año, sin horario de verano: el offset va explícito\n    inicio_iso: `${s.fecha}T${s.hora_inicio}:00-06:00`,\n    fin_iso: `${s.fecha}T${s.hora_fin}:00-06:00`,\n    summary: `${c.servicio} — ${loc.paciente ? loc.paciente.nombre_completo : ''}`.trim(),\n    description: `id_cita: ${c.id_cita}\\nid_paciente: ${c.id_paciente}\\n`\n      + `Reprogramada desde ${c.fecha} ${c.hora_inicio}`,\n  } : null,\n  actividad: {\n    tipo: 'Seguimiento',\n    resumen: `Cita ${c.id_cita} reprogramada de ${c.fecha} ${c.hora_inicio} a ${s.fecha} ${s.hora_inicio}`,\n    intencion: 'Reprogramar',\n  },\n  respuesta: {\n    ok: true, motivo: null, disponible: true, agendada: true,\n    servicio: c.servicio, id_cita: c.id_cita,\n    cita: citaPublica(resuelto.slot_texto, s),\n    mensaje: `Listo, moví su cita de ${c.servicio}: queda para ${resuelto.slot_texto}. `\n      + 'Queda como reprogramada y la clínica se la confirma 24 horas antes.',\n  },\n} }];"
+      }
+    },
+    {
+      "id": "aplicar-citas",
+      "name": "Aplicar cambios en Citas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        420
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "values:batchUpdate con RAW. Con USER_ENTERED, Google convierte \"08:30\" en hora y lo devuelve como \"8:30\", que no cuadra con el resto de la hoja.",
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ valueInputOption: 'RAW', data: $json.actualizaciones }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "id": "-borrar-evento-",
+      "name": "¿Borrar evento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2600,
+        420
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "¿Borrar evento?",
+              "leftValue": "={{ $('Preparar gestión').first().json.borrar_evento ? 'si' : 'no' }}",
+              "rightValue": "si",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "borrar-evento",
+      "name": "Borrar evento de Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "notes": "El espejo es presentación, no fuente de verdad: si Calendar falla, la cita ya quedó cancelada o movida en el Sheet y no se debe tumbar la gestión.",
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent($('Preparar gestión').first().json.borrar_evento.calendar) + '/events/' + $('Preparar gestión').first().json.borrar_evento.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "PTFrwFEcqS8cEEKT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "id": "-crear-evento-",
+      "name": "¿Crear evento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3000,
+        420
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "¿Crear evento?",
+              "leftValue": "={{ $('Preparar gestión').first().json.crear_evento ? 'si' : 'no' }}",
+              "rightValue": "si",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "crear-evento-reagendado",
+      "name": "Crear evento reagendado",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        3200,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Preparar gestión').first().json.crear_evento.calendar }}"
+        },
+        "start": "={{ $('Preparar gestión').first().json.crear_evento.inicio_iso }}",
+        "end": "={{ $('Preparar gestión').first().json.crear_evento.fin_iso }}",
+        "additionalFields": {
+          "summary": "={{ $('Preparar gestión').first().json.crear_evento.summary }}",
+          "description": "={{ $('Preparar gestión').first().json.crear_evento.description }}"
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "PTFrwFEcqS8cEEKT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "id": "guardar-evento-nuevo",
+      "name": "Guardar id del evento nuevo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3400,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA/values/Citas!R{{ $('Preparar gestión').first().json.fila }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ $json.id ]] }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "id": "actividad-de-gesti-n",
+      "name": "Actividad de gestión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        420
+      ],
+      "parameters": {
+        "jsCode": "// Una fila en Actividades por cada gestión, con los enums que ya viven en Config.\nconst prep = $('Preparar gestión').first().json;\nconst loc = $('Localizar cita').first().json;\nconst datos = $('Preparar datos').first().json;\n\nconst ids = datos.actividades\n  .map((a) => parseInt(String(a.id_actividad || '').replace(/\\D/g, ''), 10))\n  .filter((n) => !Number.isNaN(n));\n\nreturn [{\n  json: {\n    id_actividad: 'ACT-' + String((ids.length ? Math.max(...ids) : 0) + 1).padStart(5, '0'),\n    fecha_hora: DateTime.now().setZone('America/Costa_Rica').toFormat('yyyy-MM-dd HH:mm'),\n    id_paciente: loc.cita.id_paciente,\n    id_oportunidad: loc.cita.id_oportunidad || '',\n    id_cita: loc.cita.id_cita,\n    // si vino con token, el paciente entró por el enlace del correo, no por WhatsApp\n    canal: String($('Normalizar entrada').first().json.token || '').trim() ? 'Email' : 'WhatsApp',\n    tipo: prep.actividad.tipo,\n    direccion: 'Entrante',\n    resumen: prep.actividad.resumen,\n    intencion: prep.actividad.intencion,\n    sentimiento: 'Neutro',\n    generado_por: 'Bot',\n    requiere_seguimiento: 'FALSE',\n    url_documento: '',\n  },\n}];"
+      }
+    },
+    {
+      "id": "escribir-actividad-gestion",
+      "name": "Escribir actividad de gestión",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3800,
+        420
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Actividades"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OzuELp4CRMHcSYT8",
+          "name": "trignia automations account"
+        }
+      }
+    },
+    {
+      "id": "respuesta-gesti-n",
+      "name": "Respuesta gestión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        420
+      ],
+      "parameters": {
+        "jsCode": "// Lleva la salida al contrato del sub-workflow, igual que hace \"Respuesta agendada\".\nconst prep = $('Preparar gestión').first().json;\nreturn [{\n  json: {\n    ...prep.respuesta,\n    interpretacion: prep.respuesta.cita.texto,\n    cargo_por_cancelacion_tardia: prep.cargo_por_cancelacion_tardia === true,\n    alternativas: [prep.respuesta.cita],\n    // Payload para \"Enviar correo de la cita\". En `confirmar` viene con `tipo` vacío y el\n    // sub-workflow de correos corta: la confirmación vive únicamente en WhatsApp.\n    correo: prep.correo || { tipo: '' },\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "motor-correo-cita",
+      "name": "Enviar correo de la cita",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4520,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "JMZoI1W9QC16LdVK",
+          "mode": "list",
+          "cachedResultName": "Clínica — Correos de citas",
+          "cachedResultUrl": "/workflow/JMZoI1W9QC16LdVK"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo": "={{ $json.correo?.tipo ?? '' }}",
+            "email": "={{ $json.correo?.email ?? '' }}",
+            "nombre_paciente": "={{ $json.correo?.nombre_paciente ?? '' }}",
+            "servicio": "={{ $json.correo?.servicio ?? '' }}",
+            "texto_cita": "={{ $json.correo?.texto_cita ?? '' }}",
+            "profesional": "={{ $json.correo?.profesional ?? '' }}",
+            "id_cita": "={{ $json.correo?.id_cita ?? '' }}",
+            "nota": "={{ $json.correo?.nota ?? '' }}",
+            "texto_anterior": "={{ $json.correo?.texto_anterior ?? '' }}",
+            "sede_nombre": "={{ $json.correo?.sede_nombre ?? '' }}",
+            "sede_direccion": "={{ $json.correo?.sede_direccion ?? '' }}",
+            "sede_link_maps": "={{ $json.correo?.sede_link_maps ?? '' }}",
+            "sede_telefono": "={{ $json.correo?.sede_telefono ?? '' }}",
+            "sede_whatsapp": "={{ $json.correo?.sede_whatsapp ?? '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "servicio",
+              "displayName": "servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "texto_cita",
+              "displayName": "texto_cita",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "profesional",
+              "displayName": "profesional",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "id_cita",
+              "displayName": "id_cita",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nota",
+              "displayName": "nota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "texto_anterior",
+              "displayName": "texto_anterior",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sede_nombre",
+              "displayName": "sede_nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sede_direccion",
+              "displayName": "sede_direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sede_link_maps",
+              "displayName": "sede_link_maps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sede_telefono",
+              "displayName": "sede_telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sede_whatsapp",
+              "displayName": "sede_whatsapp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cuando el agente llama": {
+      "main": [
+        [
+          {
+            "node": "Normalizar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook de prueba": {
+      "main": [
+        [
+          {
+            "node": "Normalizar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar entrada": {
+      "main": [
+        [
+          {
+            "node": "Leer todo el CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer todo el CRM": {
+      "main": [
+        [
+          {
+            "node": "Preparar datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar datos": {
+      "main": [
+        [
+          {
+            "node": "Interpretar la fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar la fecha": {
+      "main": [
+        [
+          {
+            "node": "Localizar cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular slots libres": {
+      "main": [
+        [
+          {
+            "node": "¿Motor OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Motor OK?": {
+      "main": [
+        [
+          {
+            "node": "¿Qué acción?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordenar por cercanía": {
+      "main": [
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar reglas": {
+      "main": [
+        [
+          {
+            "node": "¿Puede agendar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Puede agendar?": {
+      "main": [
+        [
+          {
+            "node": "Resolver slot pedido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolver slot pedido": {
+      "main": [
+        [
+          {
+            "node": "¿Slot resuelto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Slot resuelto?": {
+      "main": [
+        [
+          {
+            "node": "¿Agendar o reagendar?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Releer citas frescas": {
+      "main": [
+        [
+          {
+            "node": "Preparar citas frescas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar citas frescas": {
+      "main": [
+        [
+          {
+            "node": "Confirmar y preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar y preparar": {
+      "main": [
+        [
+          {
+            "node": "¿Sigue libre?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Sigue libre?": {
+      "main": [
+        [
+          {
+            "node": "Fila cita",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fila cita": {
+      "main": [
+        [
+          {
+            "node": "Escribir cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribir cita": {
+      "main": [
+        [
+          {
+            "node": "Fila paciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fila paciente": {
+      "main": [
+        [
+          {
+            "node": "Guardar paciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar paciente": {
+      "main": [
+        [
+          {
+            "node": "Fila actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fila actividad": {
+      "main": [
+        [
+          {
+            "node": "Escribir actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribir actividad": {
+      "main": [
+        [
+          {
+            "node": "Crear evento en Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear evento en Calendar": {
+      "main": [
+        [
+          {
+            "node": "Guardar id del evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar id del evento": {
+      "main": [
+        [
+          {
+            "node": "¿Hay oportunidad?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay oportunidad?": {
+      "main": [
+        [
+          {
+            "node": "Fila oportunidad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta agendada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fila oportunidad": {
+      "main": [
+        [
+          {
+            "node": "Actualizar oportunidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar oportunidad": {
+      "main": [
+        [
+          {
+            "node": "Respuesta agendada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta agendada": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo de la cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Localizar cita": {
+      "main": [
+        [
+          {
+            "node": "¿Cita localizada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Cita localizada?": {
+      "main": [
+        [
+          {
+            "node": "Calcular slots libres",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Qué acción?": {
+      "main": [
+        [
+          {
+            "node": "Ordenar por cercanía",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validar reglas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar gestión",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar gestión",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resolver slot pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Agendar o reagendar?": {
+      "main": [
+        [
+          {
+            "node": "Releer citas frescas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar gestión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar gestión": {
+      "main": [
+        [
+          {
+            "node": "Aplicar cambios en Citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar cambios en Citas": {
+      "main": [
+        [
+          {
+            "node": "¿Borrar evento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Borrar evento?": {
+      "main": [
+        [
+          {
+            "node": "Borrar evento de Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Crear evento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Borrar evento de Calendar": {
+      "main": [
+        [
+          {
+            "node": "¿Crear evento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Crear evento?": {
+      "main": [
+        [
+          {
+            "node": "Crear evento reagendado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Actividad de gestión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear evento reagendado": {
+      "main": [
+        [
+          {
+            "node": "Guardar id del evento nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar id del evento nuevo": {
+      "main": [
+        [
+          {
+            "node": "Actividad de gestión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actividad de gestión": {
+      "main": [
+        [
+          {
+            "node": "Escribir actividad de gestión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribir actividad de gestión": {
+      "main": [
+        [
+          {
+            "node": "Respuesta gestión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta gestión": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo de la cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar correo de la cita": {
+      "main": [
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

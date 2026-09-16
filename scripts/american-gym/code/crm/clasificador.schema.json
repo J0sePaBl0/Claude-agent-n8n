@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "properties": {
+    "es_lead": {
+      "type": "boolean",
+      "description": "true si el mensaje muestra interés comercial real: pregunta por una membresía, un plan, un servicio o su precio, quiere inscribirse, quiere agendar/reagendar una cita (evaluación, clase de prueba, entrenador personal). false si es una consulta genérica sin valor de venta: solo pregunta la dirección o el horario, saluda, agradece, es un número equivocado, spam, o un mensaje que no tiene nada que ver con el gimnasio."
+    },
+    "intencion": {
+      "type": "string",
+      "enum": ["Info precio", "Agendar", "Inscripción", "Reprogramar", "Reclamo"],
+      "description": "Intención principal del mensaje. Si es_lead es false, escoge la más cercana igual."
+    },
+    "sentimiento": {
+      "type": "string",
+      "enum": ["Positivo", "Neutro", "Negativo"],
+      "description": "Tono emocional del mensaje."
+    },
+    "urgencia": {
+      "type": "string",
+      "enum": ["Alta", "Media", "Baja"],
+      "description": "Qué tan rápido necesita atención. Alta si menciona una lesión, un malestar o algo que no puede esperar."
+    },
+    "servicio_interes": {
+      "type": "string",
+      "description": "El id_servicio EXACTO del catálogo (formato SRV-XXX) que mejor coincide con lo que pide. Cadena vacía si ninguno aplica claramente. Nunca inventes un id que no esté en el catálogo."
+    }
+  },
+  "required": ["es_lead", "intencion", "sentimiento", "urgencia", "servicio_interes"]
+}

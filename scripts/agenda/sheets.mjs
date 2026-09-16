@@ -2,6 +2,7 @@
 // El workflow TEMP — Sheets IO (9zjbfhfi8bDb2v19) expone POST /webhook/sheets-io-tmp
 // y reenvía a sheets.googleapis.com con la credencial googleSheetsOAuth2Api.
 import { readFileSync } from 'node:fs';
+import { T } from './tenant.mjs';
 
 const cfg = JSON.parse(readFileSync(
   'c:/Users/PC/Documents/proyectos-programacion/Claude-agent-n8n/.mcp.json', 'utf8'));
@@ -10,14 +11,15 @@ const env = cfg.mcpServers['n8n-mcp'].env;
 export const N8N = env.N8N_API_URL.replace(/\/$/, '');
 export const KEY = env.N8N_API_KEY;
 export const PROXY = `${N8N}/webhook/sheets-io-tmp`;
-export const SID = '1k30yy6Z3II5THVeqLe8dLUiAxhu0TlE6ulNyySbm7tA';
+// El Sheet depende del demo: ver tenant.mjs (TENANT=american-gym | dulce-maria).
+export const SID = T.sid;
 
 // Google Sheets permite 60 lecturas por minuto por usuario. Una tanda de pruebas la agota
 // enseguida y el proxy devuelve un 500 que envuelve el 429 de Google. Sin esto, cualquier
 // script largo se cae a la mitad y deja la hoja a medio limpiar.
 const dormir = (ms) => new Promise((s) => setTimeout(s, ms));
 
-async function call(body, intento = 1) {
+export async function call(body, intento = 1) {
   const r = await fetch(PROXY, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

@@ -1,0 +1,7 @@
+Mueve una cita que el cliente ya tiene a otro día u hora. Es UNA sola llamada: no
+canceles y vuelvas a agendar.
+En fecha_texto va PARA CUÁNDO la quiere, con día Y hora, en las palabras del cliente.
+Consultá disponibilidad antes si no sabés qué espacios hay.
+Si devuelve "ambiguo" puede ser que tenga varias citas o que ese día haya varios espacios:
+mirá el mensaje y repreguntá con lo que trae.
+La cita queda como REPROGRAMADA y el gimnasio la confirma 24 horas antes.

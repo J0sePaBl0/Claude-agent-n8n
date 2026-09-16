@@ -1,0 +1,6 @@
+Cancela una cita que el cliente ya tiene agendada.
+Si la política de cancelación del gimnasio tiene cargo, avisale ANTES de llamarla, y llamala
+igual si aun así quiere cancelar: el gimnasio prefiere saberlo a perder el espacio. El
+mensaje que devuelve dice si aplicó algún cargo: repetí eso, no lo deduzcas.
+NO le pidas cuál cita ni un número de cita: la herramienta la encuentra por su teléfono.
+Si devuelve motivo "ambiguo" es que tiene varias; repreguntá con la lista que trae.

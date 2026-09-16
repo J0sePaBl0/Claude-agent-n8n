@@ -1,0 +1,226 @@
+{
+  "id": "JMZoI1W9QC16LdVK",
+  "name": "Clínica — Correos de citas",
+  "active": true,
+  "updatedAt": "2026-08-28T21:07:42.251Z",
+  "activeVersionId": "1499bd26-9ba4-496c-9411-d9bdcca807de",
+  "tags": [],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Costa_Rica"
+  },
+  "nodes": [
+    {
+      "id": "corr-trigger",
+      "name": "Cuando el motor llama",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tipo"
+            },
+            {
+              "name": "email"
+            },
+            {
+              "name": "nombre_paciente"
+            },
+            {
+              "name": "servicio"
+            },
+            {
+              "name": "texto_cita"
+            },
+            {
+              "name": "profesional"
+            },
+            {
+              "name": "id_cita"
+            },
+            {
+              "name": "nota"
+            },
+            {
+              "name": "texto_anterior"
+            },
+            {
+              "name": "sede_nombre"
+            },
+            {
+              "name": "sede_direccion"
+            },
+            {
+              "name": "sede_link_maps"
+            },
+            {
+              "name": "sede_telefono"
+            },
+            {
+              "name": "sede_whatsapp"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "corr-if",
+      "name": "¿Hay a quién escribirle?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-email",
+              "leftValue": "={{ ($json.email || \"\").trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c-tipo",
+              "leftValue": "={{ ($json.tipo || \"\").trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "corr-armar",
+      "name": "Armar correo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Arma el asunto y el HTML del correo de una cita. Tres tipos, un solo nodo: el cuerpo\n// es el mismo salvo el encabezado, el bloque de la cita y la línea de cierre.\n//\n// NO lleva botones de Confirmar / Reagendar / Cancelar. Por decisión del proyecto la\n// gestión vive ÚNICAMENTE en WhatsApp: el correo avisa, no actúa. Así no hace falta el\n// token de gestión, ni un formulario público, ni mantener dos caminos que puedan\n// contradecirse.\nconst e = $input.first().json;\n\nconst txt = (v) => (v === undefined || v === null ? '' : String(v)).trim();\n// Todo lo que venga de la hoja o del paciente termina dentro del HTML del correo.\nconst esc = (v) => txt(v)\n  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\n\nconst tipo = txt(e.tipo);\nconst nombre = esc(e.nombre_paciente) || 'Paciente';\nconst servicio = esc(e.servicio);\nconst cita = esc(e.texto_cita);\nconst profesional = esc(e.profesional);\nconst anterior = esc(e.texto_anterior);\nconst nota = esc(e.nota);\nconst clinica = esc(e.sede_nombre) || 'Clínica Dental Dulce María';\nconst direccion = esc(e.sede_direccion);\nconst maps = txt(e.sede_link_maps);\nconst telefono = esc(e.sede_telefono);\nconst whatsapp = esc(e.sede_whatsapp) || telefono;\n\nconst PLANTILLAS = {\n  nueva: {\n    asunto: `Su cita quedó solicitada — ${txt(e.servicio)}`,\n    titulo: 'Su cita quedó solicitada',\n    entrada: `Recibimos su solicitud de cita para <strong>${servicio}</strong>. `\n      + 'Aún no está confirmada: la clínica se la confirma por WhatsApp 24 horas antes.',\n    color: '#0E6B5A',\n    etiqueta: 'Solicitada',\n  },\n  reprogramada: {\n    asunto: `Su cita cambió de fecha — ${txt(e.servicio)}`,\n    titulo: 'Movimos su cita',\n    entrada: `Su cita de <strong>${servicio}</strong> quedó reprogramada. `\n      + 'La clínica se la confirma por WhatsApp 24 horas antes de la nueva fecha.',\n    color: '#8A5A00',\n    etiqueta: 'Reprogramada',\n  },\n  cancelada: {\n    asunto: `Cancelamos su cita — ${txt(e.servicio)}`,\n    titulo: 'Su cita quedó cancelada',\n    entrada: `Cancelamos su cita de <strong>${servicio}</strong>, tal como nos pidió por WhatsApp.`,\n    color: '#A62B1F',\n    etiqueta: 'Cancelada',\n  },\n};\n\nconst p = PLANTILLAS[tipo];\nif (!p) throw new Error(`tipo de correo desconocido: \"${tipo}\"`);\n\n// El bloque de la cita. En una cancelación es la cita que se va, así que va tachada.\nconst filaDato = (etiqueta, valor) => (valor\n  ? `<tr><td style=\"padding:6px 0;font-size:12px;color:#7C908A;width:38%;`\n    + `text-transform:uppercase;letter-spacing:.06em;\">${etiqueta}</td>`\n    + `<td style=\"padding:6px 0;font-size:15px;color:#17322C;font-weight:600;\">${valor}</td></tr>`\n  : '');\n\nconst bloqueCita = `\n  <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"\n         style=\"background:#E9F5F4;border:1px solid #A2D4CA;border-radius:8px;padding:18px 20px;\">\n    <tr><td>\n      <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">\n        ${filaDato('Servicio', servicio)}\n        ${filaDato(tipo === 'cancelada' ? 'Era el' : 'Fecha y hora', cita)}\n        ${tipo === 'reprogramada' ? filaDato('Antes era', anterior) : ''}\n        ${filaDato('Profesional', profesional)}\n        ${filaDato('Estado', p.etiqueta)}\n      </table>\n    </td></tr>\n  </table>`;\n\nconst bloqueNota = nota\n  ? `<div style=\"margin:18px 0 0;padding:12px 16px;background:#FBF3E2;border-left:3px solid #8A5A00;\n       border-radius:0 6px 6px 0;font-size:14px;color:#5A4A20;line-height:1.5;\">${nota}</div>`\n  : '';\n\n// La gestión vive en WhatsApp, así que el correo empuja para allá en vez de dar botones.\nconst cierre = tipo === 'cancelada'\n  ? 'Cuando quiera volver a agendar, escríbanos por WhatsApp y con gusto le buscamos un espacio.'\n  : 'Si necesita confirmarla, moverla o cancelarla, escríbanos por WhatsApp. '\n    + 'Recuerde que los cambios con menos de 24 horas de aviso generan un cargo de 10.000 colones.';\n\nconst bloqueSede = (direccion || telefono)\n  ? `<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"\n            style=\"margin-top:22px;border-top:1px solid #D3E2DF;padding-top:16px;\">\n       <tr><td style=\"font-size:13px;color:#556963;line-height:1.6;\">\n         ${direccion ? `<strong style=\"color:#17322C;\">${clinica}</strong><br>${direccion}<br>` : ''}\n         ${maps ? `<a href=\"${esc(maps)}\" style=\"color:#0E6B5A;\">Ver en el mapa</a><br>` : ''}\n         ${telefono ? `Tel. ${telefono}` : ''}${whatsapp && whatsapp !== telefono ? ` · WhatsApp ${whatsapp}` : ''}\n       </td></tr>\n     </table>`\n  : '';\n\nconst html = `<!DOCTYPE html>\n<html lang=\"es\"><head><meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>${esc(p.asunto)}</title></head>\n<body style=\"margin:0;padding:0;background:#F4F7F6;\n             font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:#17322C;\">\n  <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"\n         style=\"background:#F4F7F6;padding:32px 12px;\">\n    <tr><td align=\"center\">\n      <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"\n             style=\"max-width:560px;background:#ffffff;border:1px solid #D3E2DF;\n                    border-radius:12px;overflow:hidden;\">\n        <tr><td style=\"background:${p.color};padding:22px 28px;\">\n          <div style=\"color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.2px;\">${clinica}</div>\n        </td></tr>\n        <tr><td style=\"padding:28px;\">\n          <h1 style=\"margin:0 0 12px;font-size:21px;line-height:1.25;color:#17322C;\">${p.titulo}</h1>\n          <p style=\"margin:0 0 20px;font-size:15px;line-height:1.6;color:#556963;\">\n            Hola ${nombre}, ${p.entrada}\n          </p>\n          ${bloqueCita}\n          ${bloqueNota}\n          <p style=\"margin:20px 0 0;font-size:14px;line-height:1.6;color:#556963;\">${cierre}</p>\n          ${bloqueSede}\n        </td></tr>\n        <tr><td style=\"background:#E9F5F4;border-top:1px solid #A2D4CA;padding:16px 28px;\n                       font-size:12px;color:#7C908A;line-height:1.5;\">\n          Este correo se generó automáticamente al gestionar su cita\n          ${txt(e.id_cita) ? `(${esc(e.id_cita)})` : ''}. No hace falta responderlo.\n        </td></tr>\n      </table>\n    </td></tr>\n  </table>\n</body></html>`;\n\nreturn [{ json: { asunto: p.asunto, html, para: txt(e.email), tipo, id_cita: txt(e.id_cita) } }];\n"
+      }
+    },
+    {
+      "id": "corr-enviar",
+      "name": "Enviar correo al paciente",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        -100
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "parameters": {
+        "sendTo": "={{ $json.para }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Clínica Dental Dulce María"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "JQv3rDJEhLKRGdQ7",
+          "name": "Gmail trignia automations"
+        }
+      },
+      "webhookId": "a46d15a2-7f59-437e-b363-f259f7a848ce"
+    },
+    {
+      "id": "corr-noop",
+      "name": "Sin correo del paciente",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        480,
+        100
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "corr-nota",
+      "name": "Documentación",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -420
+      ],
+      "parameters": {
+        "height": 360,
+        "width": 760,
+        "content": "## Clínica — Correos de citas\n\nSub-workflow de aviso. Lo llama **Agenda — disponibilidad y citas** (`LsbRqfF2c32hVahw`)\ndesde el nodo `Enviar correo de la cita`, con `waitForSubWorkflow: false`: el paciente\nrecibe su respuesta en WhatsApp sin esperar a Gmail.\n\n**Tipos:** `nueva` · `reprogramada` · `cancelada`.\n\n**No existe un correo de confirmación, y es a propósito.** La confirmación vive\nÚNICAMENTE en WhatsApp (tool `confirmar_cita` del agente). Por eso estos correos no\nllevan botones de Confirmar / Reagendar / Cancelar: avisan y empujan a WhatsApp. Sin\nbotones no hace falta el `token_gestion` en los enlaces ni un formulario público.\n\n**Si el paciente no dio correo**, `email` llega vacío y el IF corta: la gestión ya se\ncompletó igual en el Sheet. El correo nunca es un requisito para agendar.\n\n⚠️ Sale de `trigniaautomations@gmail.com`, no de un dominio de la clínica. Se mitiga con\nel nombre visible del remitente. Cambiar eso exige un dominio propio en Gmail."
+      }
+    }
+  ],
+  "connections": {
+    "Cuando el motor llama": {
+      "main": [
+        [
+          {
+            "node": "¿Hay a quién escribirle?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay a quién escribirle?": {
+      "main": [
+        [
+          {
+            "node": "Armar correo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin correo del paciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar correo": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo al paciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

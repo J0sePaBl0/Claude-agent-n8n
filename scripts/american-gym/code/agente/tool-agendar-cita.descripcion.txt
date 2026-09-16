@@ -1,0 +1,7 @@
+Reserva uno de los espacios que devolvió consultar_disponibilidad.
+En fecha_texto poné el día Y la hora que el cliente confirmó, con a. m. o p. m.
+("el martes 11 a las 6 de la tarde"). Si solo mandás la hora sin el día y hay varios días
+con esa hora, devuelve motivo "ambiguo" y tenés que repreguntar.
+La cita queda como SOLICITADA: el gimnasio la confirma por WhatsApp 24 horas antes.
+En nombre_dictado va el nombre completo que el cliente dictó (vacío si no lo dijo él) y en
+email su correo: con eso queda registrado en el gimnasio a su nombre real.
