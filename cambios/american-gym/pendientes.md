@@ -1,113 +1,183 @@
-# American Gym — pendientes con el gimnasio
+# American Gym — pendientes
 
-Estado al **2026-09-16**, después de cargar la información que pasó el gimnasio (entrenadores,
-cronograma de clases, marcas, ubicación y horarios).
+Estado al **2026-09-23**. El documento tiene dos partes: **A** es lo que necesitamos que el
+gimnasio nos responda (para llevar a la reunión), y **B** es lo interno nuestro.
 
-## 1. Precios reales — BLOQUEANTE para enseñar el demo afuera
+**Cómo se comporta hoy el agente ante lo que falta:** no inventa. Cuando no tiene el dato, lo
+dice con naturalidad ("prefiero no darle un monto equivocado; déjeme averiguarlo") y avisa a una
+persona del equipo. Por eso cada respuesta de la parte A se traduce en menos casos escalados.
 
-Todos los precios que hay hoy en la pestaña `Servicios` **los inventé yo** a pedido del
-usuario, para que el agente pueda cotizar mientras llegan los reales. Son plausibles para el
-mercado costarricense y nada más que eso.
+---
 
-Lo que hay que pedirle al gimnasio:
+# A. Lo que necesitamos del gimnasio
 
-- Membresía de American Gym: mensual, trimestral y anual.
-- Matrícula o inscripción (pago único).
-- Pase diario.
-- Membresía de American Pilates y cuántas clases incluye.
-- Membresía de American Jungle Box.
-- Clase suelta de Pilates Reformer y de Jungle Box.
-- Entrenamiento personal 1 a 1 y rutina personalizada.
-- Si la valoración física inicial es realmente sin costo.
-- Si las clases de American Experiences están de verdad incluidas en la membresía.
+## A1. Membresías: qué incluye cada una — PRIORIDAD ALTA
 
-Se cambian en `scripts/american-gym/cargar-catalogo.mjs` y se publican con
-`cd scripts/agenda && TENANT=american-gym node ../american-gym/cargar-catalogo.mjs --apply`.
-**No editarlos a mano en Google:** la próxima corrida del script los pisa.
+Es la pregunta más probable de un cliente y hoy **escala**. Lo que ya está cargado, porque el
+gimnasio lo indicó: las membresías del gimnasio incluyen el **uso regular del gimnasio** y la
+**valoración física inicial** (sin costo adicional).
 
-Convención de precios que ya entiende el agente:
-- `precio_desde` = `precio_hasta` → precio fijo.
-- `precio_hasta` vacío → es un mínimo, se dice "desde X".
-- distintos → rango, se dice "entre X y Y".
-- La unidad (POR MES, POR SESIÓN, POR CLASE, POR AÑO) va escrita en la `descripcion`, y el
-  agente tiene instrucción de decirla siempre.
+Falta confirmar:
 
-## 2. Reglamento y políticas — el hueco más grande después de los precios
+- [ ] **¿Las membresías del gimnasio incluyen las clases de American Experiences** (Pilates
+      Experience, Full Body, Yoga, Dance, Glúteos y Piernas, Virtual Cycling, Military, GAP)?
+      ¿Todas las membresías o solo algunas?
+- [ ] ¿Qué incluye cada **membresía del Box** (clases de WOD y HIIT, uso del gimnasio)?
+- [ ] ¿Qué incluye el **Plan Nutricional** (₡55.997)? ¿Y el paquete **Box + Nutrición Semestral**?
+- [ ] ¿La **valoración física** también se ofrece a quien no es miembro, y a qué costo?
 
-No hay documento de RAG de políticas, así que hoy el agente **escala** ante cualquiera de
-estas preguntas, que son de las más frecuentes:
+## A2. Precios que faltan
 
-- Requisitos de inscripción y qué papeles hay que llevar.
-- Congelamiento de la membresía: si se puede, por cuánto tiempo, con qué aviso.
-- Cancelación de la membresía y de una clase reservada; si hay cargo por no presentarse.
-- Reembolsos.
-- Formas de pago (efectivo, tarjeta, SINPE, deducción automática).
-- Reglamento de uso: qué llevar, uso de máquinas, casilleros, invitados, menores de edad.
+Ya están cargados todos los de las tablas "Paquetes y tarifas" y "Paquetes BOX" (ver B1). Hoy
+**no tienen precio**, y por eso el agente escala si preguntan:
 
-Cuando lleguen, van como un `reglamento.md` más en `cambios/american-gym/rag/`. A propósito
-**no dejé un archivo vacío**: un documento de relleno en el RAG haría que el agente conteste
-políticas inventadas, que es peor que escalar.
+- [ ] **Clase suelta de Pilates Reformer** (sin membresía).
+- [ ] **Clase suelta de Jungle Box** (sin membresía).
+- [ ] **Membresía de American Pilates:** ¿existe?, ¿cuánto cuesta?, ¿cuántas clases incluye?
+      No aparece en las tarifas.
+- [ ] **Clases de American Experiences sueltas** (para quien no tiene membresía del gimnasio),
+      si se pueden pagar aparte.
+- [ ] **Entrenamiento personal 1 a 1:** ¿se ofrece?, ¿a qué precio? Se quitó del catálogo
+      porque no estaba en las tarifas.
+- [ ] **Matrícula o inscripción:** ¿se cobra?, ¿cuánto? No aparece en las tarifas.
+- [ ] **Rutina personalizada:** hoy figura a **₡9.000 por sesión**, valor que puse yo (el único
+      inventado que se dejó a propósito). Confirmar o corregir.
 
-## 3. ~~"MACHO" en el cuadro de turnos~~ — RESUELTO
+## A3. Planes de las tablas que no quedaron claros
 
-Confirmado por el usuario (2026-09-16): **MACHO es Luis Madrigal Molina** (`ENT-006`). Ya
-estaba cargado así por descarte en `cargar-catalogo.mjs`; no hizo falta ningún cambio.
+- [ ] **Plan B de Méritos (₡21.000):** ¿qué es y a quién aplica? **No está en el catálogo**, así
+      que hoy el agente no sabe que existe.
+- [ ] **Plan de Mediodía (₡25.000):** ¿de qué hora a qué hora? Y el **Plan D (₡23.000)**, que en
+      la tabla dice "5 a. m. a 11 a. m. / Mediodía": ¿el mediodía es parte del plan o es otro?
+- [ ] ¿Las tablas que pasaron están **completas**? La primera captura termina en Plan
+      Nutricional y la segunda empieza en Plan Parejas: puede haber filas en medio.
+- [ ] Confirmar que en los **planes +3, +4, +5** (y Box +3, Box Grupo +4) el número es la
+      cantidad de personas y el precio es el **total del grupo**. Así están cargados.
+- [ ] ¿El **Plan Estudiantil**, el **Adulto Mayor** (65+) y los planes grupales piden algún
+      **comprobante o requisito**?
 
-## 4. Horario de atención humana por WhatsApp
+## A4. Políticas — el reglamento ya llegó; faltan los detalles comerciales
 
-Cuando el agente escala, el mensaje cambia según si hay alguien para atender. Está puesto
-**lunes a domingo de 7:00 a. m. a 8:00 p. m.**, que es una aproximación mía: el nodo solo
-admite UNA ventana para toda la semana y el gimnasio abre en horarios distintos cada día.
-Hay que preguntar a qué horas hay de verdad una persona contestando el WhatsApp.
+**Ya cargado (2026-09-23):** el documento "Políticas y Reglamento Interno American Gym" está en el
+RAG como `rag/reglamento.md`. El agente ya contesta sin escalar: ingreso y membresía personal,
+visitantes, menores (12 años o más; menores de 12 no pueden estar en planta, máquinas ni pesas),
+uso de máquinas, comida, higiene, conducta, entrenadores personales, clases grupales, salud y
+seguridad, fumar/vapear, objetos perdidos, fotos y videos, quejas.
 
-Se cambia en `scripts/american-gym/clonar.mjs` (`CAMBIOS_CFG`).
+Lo que el reglamento **no** trae y hoy se resuelve con "eso se gestiona en recepción" (o escala):
 
-## 4b. El número 7254-7861 en los correos de cita
+- [ ] **Congelamiento:** ¿se puede?, ¿por cuánto tiempo?, ¿con qué aviso? El reglamento solo
+      dice que se gestiona en recepción.
+- [ ] **Devoluciones y reembolsos:** ¿aplican?, ¿en qué casos?
+- [ ] **Traslado** de una membresía a otra persona (el reglamento dice que es personal).
+- [ ] **Formas de pago:** efectivo, tarjeta, SINPE, deducción automática. Esta es la única que
+      hoy sí escala.
+- [ ] **Requisitos de inscripción:** qué papeles o datos hay que llevar.
+- [ ] **Cancelación** de la membresía y de una clase ya reservada; si hay cargo por no
+      presentarse.
+- [ ] **Menores de 12 a 17 años:** ¿qué autorización piden y de quién?, ¿hay membresía o
+      precio distinto para ellos?
+- [ ] **Entrenadores personales:** el reglamento dice que fijan sus tarifas con el cliente. ¿Hay
+      una lista de entrenadores que ofrezcan 1 a 1 y un rango de precio que podamos informar?
+- [ ] **Texto de la declaración de responsabilidad** que firma el usuario: hoy el agente solo
+      dice que existe y que el texto se ve en recepción.
 
-El agente **sustituye** al WhatsApp 7254-7861: por eso tiene prohibido darle ese número al
-cliente (ya está escribiendo ahí) y los documentos del RAG dicen "este mismo chat". Pero el
-correo de confirmación de cita **sí** lo imprime en el pie, tomándolo de `Config.whatsapp`, y
-ahí está bien: quien lee el correo está fuera de WhatsApp y necesita a dónde escribir.
+Notas de cómo quedó el agente: no interpreta cláusulas legales ni da juicios de salud; ante un
+síntoma dice que pare y pida ayuda (9-1-1 si es urgente) y avisa a una persona del equipo.
 
-Lo que hay que revisar antes del corte: hoy el demo corre en el **6419-1107**, no en el
-7254-7861. Mientras eso siga así, el correo manda al cliente a un número que el bot no
-contesta. Se arregla con el corte en Chatwoot, o cambiando `Config.whatsapp` en
-`cargar-catalogo.mjs` mientras tanto.
+## A5. Atención humana y cancelaciones
 
-## 5. ~~Calendarios de Google~~ — RESUELTO (2026-09-16)
+- [ ] **Horario en que una persona contesta el WhatsApp.** Hoy está puesto de **lunes a domingo,
+      7:00 a. m. a 8:00 p. m.** (aproximación mía; el sistema admite una sola ventana para toda
+      la semana y el gimnasio abre distinto cada día). Fuera de ese horario el agente dice que
+      les escriben apenas abran.
+- [ ] **Cargo por cancelación tardía** de una cita o clase: monto y con cuántas horas de aviso.
+      Hoy quedan los valores heredados de la clínica; hay que poner los del gimnasio o confirmar
+      que no cobran nada. (Está en `preparar-gestion.js`, `CARGO` y `HORAS_AVISO`.)
 
-Se creó un calendario por persona real (18, deduplicado por nombre; `ENT-009` queda sin
-calendario a propósito porque está inactiva) y se llenó `Entrenadores!I` con
-`scripts/american-gym/crear-calendarios.mjs`. Verificado de punta a punta con una reserva de
-prueba: `agendar` crea el evento y `cancelar` lo borra. Detalle completo en la memoria del
-proyecto (`project_american_gym.md`).
+## A6. Identidad
 
-## 6. Cargo por cancelación tardía
+- [ ] **Colores de marca** para los correos de confirmación de cita (`MARCA` en el workflow de
+      correos). El arte que pasaron es negro con verde lima; falta confirmar los códigos.
+- [ ] **Logo** en buena resolución, si quieren que salga en los correos.
 
-En el motor (`preparar-gestion.js`) siguen los valores heredados de la clínica para
-`CARGO` y `HORAS_AVISO`. Hay que poner los del gimnasio, o confirmar que no cobra nada por
-cancelar tarde.
+---
 
-## 7. Datos de prueba en el Sheet (acumulados, no solo de la carga inicial)
+# B. Lo interno nuestro
 
-Actualizado al 2026-09-16 — ya no son solo los tres de la carga inicial, se sumaron los que
-dejaron las baterías de pruebas de esta etapa (motor, cupo, nombre real, voz, calendarios):
+## B1. Qué ya está cargado (2026-09-23)
 
-- `Clientes`: CLI-0001, CLI-0002 y CLI-0003 marcados "(ficticio)"; CLI-0004 "Juan Pablo
-  Artavia Mora" (número real usado para probar el agente conversando, `+506 6018-1661`);
-  CLI-0005 "Prueba QA Calendar" (número inventado, `+506 6000-0000`).
-- `Citas`: CITA-0001 a CITA-0008. Todas menos CITA-0002 (Solicitada) y CITA-0003
-  (Confirmada) quedaron `Cancelada` o `Completada` — no hay ninguna reserva activa colgando
-  de una prueba.
+- **Precios reales** de las dos tablas, como `SRV-100` en adelante: 25 membresías/paquetes
+  (gimnasio, Sesión de ₡5.000, Plan Nutricional y los 9 del Box). Las unidades (por mes, por
+  semana, por trimestre, por año) van en la descripción y el agente las dice siempre.
+- **Valoración física inicial:** incluida con las membresías del gimnasio, sin costo adicional.
+- **Membresías del gimnasio:** incluyen el uso regular del gimnasio.
+- **Regla vigente:** no queda nada inventado en el catálogo, salvo la Rutina personalizada. Todo
+  lo demás que el gimnasio no especificó quedó **sin precio** (celda vacía) y sin afirmaciones
+  de "incluido" o "gratis".
+- Planes grupales: precio **total del grupo** (el número es la cantidad de personas).
 
-El tester va a agregar más filas de estas mismas. Sirven para probar; conviene limpiar
-`Clientes`, `Citas` y sus calendarios de Google asociados antes del demo real o de
-entregárselo al cliente final.
+Se editan en `scripts/american-gym/cargar-catalogo.mjs` y se publican con:
 
-## 8. Cosas de identidad que el gimnasio todavía no definió
+```
+cd scripts/agenda
+node proxy.mjs crear
+TENANT=american-gym node ../american-gym/cargar-catalogo.mjs --apply
+node proxy.mjs borrar
+```
 
-- Colores de marca para los correos de cita (`MARCA` en el workflow de correos). El arte que
-  pasaron es negro con verde lima.
-- El perfil de WhatsApp del número del demo todavía muestra "Horarios ministros" y una
-  descripción de la clínica dental. Está así por decisión del usuario; hay que cambiarlo
-  antes del corte.
+(El script escribe al Sheet por un workflow proxy temporal que se crea antes y se borra
+después.) **No editar el Sheet a mano:** la próxima corrida del script lo pisa.
+
+Convención de precios que entiende el agente: `precio_desde` = `precio_hasta` → fijo;
+`precio_hasta` vacío → "desde X"; distintos → "entre X y Y"; ambos vacíos → no hay precio, el
+agente averigua.
+
+## B2. RAG (documentos del agente en Drive)
+
+Carpeta "Agente - American Gym" (`1Iu6Zx-g1pX2N4g0_NKpXHPqs-2bUbwYS`). Los archivos fuente viven
+en `cambios/american-gym/rag/`. El 2026-09-23 se corrigieron y subieron `clases.md` y
+`equipo.md` (ya no afirman cosas que el gimnasio no confirmó), se creó `reglamento.md` (Drive id
+`1cxaf-OpE3Y-hOhcq9H3RvnXa1amGX8wM`, sale del docx "Políticas y Reglamento Interno American Gym")
+y se reindexó todo.
+
+⚠️ La credencial de Drive del agente está **vencida** y sus triggers de Drive están
+deshabilitados: **un cambio en Drive no se indexa solo**. Hay que lanzar "Reindexar todo
+(manual)" en el workflow del agente. Reconectar la credencial requiere el navegador (OAuth).
+
+## B3. Voz del agente al escalar
+
+El mensaje que ve el cliente al escalar es la frase del agente más un aviso fijo ("Ya le aviso a
+una persona del equipo para que le ayude; en unos minutos le escribe por aquí mismo."). Un
+**filtro determinista** en el nodo `Determinar Mensaje por Horario` quita las frases que suenan
+a sistema ("la información disponible…") o que anuncian el traspaso. Ese nodo y el aviso nuevo
+están **solo en el workflow vivo**, no en `clonar.mjs`: si se vuelve a clonar el agente se pierden
+(el código del filtro está en `scripts/american-gym/code/agente/filtro-voz-escalamiento.js`).
+
+Punto flojo conocido: ante un plan que no existe ("plan B de méritos") a veces propone otro
+("¿se refiere al Plan de Mediodía?") en vez de escalar directo. Se arregla solo cuando el plan
+esté en el catálogo (A3).
+
+## B4. Antes del corte al número real
+
+- **Número en los correos de cita.** El agente sustituye al WhatsApp **7254-7861** (no se lo da
+  al cliente porque ya está escribiendo ahí), pero el correo de confirmación sí imprime un
+  número en el pie, tomado de `Config.whatsapp`. Hoy el demo corre en el **6419-1107**, no en el
+  7254-7861: mientras siga así el correo manda al cliente a un número que el bot no contesta. Se
+  arregla con el corte en Chatwoot, o cambiando `Config.whatsapp` en `cargar-catalogo.mjs`.
+- **Perfil de WhatsApp del número del demo:** todavía muestra "Horarios ministros" y una
+  descripción de la clínica dental. Está así por decisión del usuario; cambiarlo antes del corte.
+- **Datos de prueba en el Sheet.** `Clientes`: CLI-0001 a 0003 marcados "(ficticio)", CLI-0004
+  (Juan Pablo Artavia Mora, número real de pruebas, `+506 6018-1661`) y CLI-0005 "Prueba QA
+  Calendar". `Citas`: CITA-0001 a 0008 y las que dejaron las pruebas de hoy. Limpiar `Clientes`,
+  `Citas` y sus eventos en los calendarios de Google antes de entregárselo al gimnasio.
+
+## B5. Resuelto
+
+- ~~"MACHO" en el cuadro de turnos~~ → es **Luis Madrigal Molina** (`ENT-006`), confirmado
+  2026-09-16.
+- ~~Calendarios de Google~~ → 18 calendarios, uno por persona real (`ENT-009` sin calendario a
+  propósito: está inactiva). Verificado de punta a punta con una reserva de prueba
+  (2026-09-16). Detalle en la memoria del proyecto.
+- ~~Precios inventados~~ → reemplazados por las tarifas reales (2026-09-23).
+- ~~Valoración física: ¿tiene costo?~~ → incluida con la membresía (2026-09-23).

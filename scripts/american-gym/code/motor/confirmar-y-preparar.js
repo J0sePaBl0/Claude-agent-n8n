@@ -26,7 +26,9 @@ const fin = aMin(slot.hora_fin);
 const reglas = $('Validar reglas').first().json;
 // Cuántas personas caben en este espacio. Viene de `Servicios.cupo` por "Calcular slots
 // libres"; vacío = 1. Con cupo 1 esto se comporta igual que antes.
-const cupo = Math.max(1, parseInt(txt(datos.cupo), 10) || 1);
+// Igual que en "Calcular slots libres": un 0 explícito es clase cerrada, no cita 1 a 1.
+const cupoCrudo = parseInt(txt(datos.cupo), 10);
+const cupo = Number.isNaN(cupoCrudo) ? 1 : Math.max(0, cupoCrudo);
 const solapadas = citas.filter((c) => txt(c.id_entrenador) === slot.id_entrenador
   && txt(c.fecha) === slot.fecha
   && ESTADOS_QUE_OCUPAN.includes(txt(c.estado))

@@ -133,6 +133,99 @@ function inyectarCodigo(wf, clave) {
   }
 }
 
+// ---------------------------------------------------------------- cola del motor
+// Serializa las escrituras del motor (agendar/confirmar/cancelar/reagendar) con un turno en
+// Postgres. Sin esto, dos reservas simultáneas leían el mismo estado de Citas y ambas pasaban
+// el chequeo de cupo: una ráfaga de 16 pedidos metió 15 personas en una clase de 12, todas con
+// el mismo id_cliente e ids de cita repetidos (2026-09-23). Google Sheets no tiene
+// transacciones, así que el candado vive afuera.
+//
+// El turno se toma ANTES de "Leer todo el CRM", no solo alrededor del chequeo: los ids nuevos
+// (CITA/CLI/ACT) salen de esa lectura, y leída fuera del turno quedaba vieja. Se libera
+// después de "Respuesta", el único punto de salida. Las consultas (solo lectura) no esperan.
+//
+// Tomar = INSERT ... ON CONFLICT DO UPDATE WHERE vencido: atómico en Postgres, lo gana uno
+// solo. Quien no lo gana espera 1 s y reintenta; `vence` (120 s) libera el turno de una
+// ejecución que se cayó a mitad de camino. Tabla: scripts/american-gym/crear-tabla-turno.mjs.
+const PG = { postgres: { id: 'ctiw7NSHBqX5YzqF', name: 'My postgre database' } };
+const RECURSO_TURNO = 'american_gym';
+const INTENTOS_TURNO = 120;   // ~2 min de espera como máximo antes de "agenda_ocupada"
+
+function serializarEscrituras(wf) {
+  const cond = (id, leftValue, operator, rightValue = '') => ({
+    conditions: {
+      options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+      conditions: [{ id, leftValue, rightValue, operator }],
+      combinator: 'and',
+    },
+    options: {},
+  });
+  const esVerdad = { type: 'boolean', operation: 'true', singleValue: true };
+  const nuevos = [
+    { id: 'turno-escribe', name: '¿Escribe?', type: 'n8n-nodes-base.if', typeVersion: 2.2, position: [-416, 320],
+      parameters: cond('escribe-c',
+        "={{ ['agendar', 'confirmar', 'cancelar', 'reagendar'].includes($('Normalizar entrada').first().json.accion) }}",
+        esVerdad) },
+    { id: 'turno-tomar', name: 'Tomar turno', type: 'n8n-nodes-base.postgres', typeVersion: 2.6, position: [-192, 320],
+      credentials: PG,
+      parameters: { operation: 'executeQuery', options: { queryReplacement: '={{ $execution.id }}' },
+        query: `WITH t AS (
+  INSERT INTO agenda_turno (recurso, dueno, vence)
+  VALUES ('${RECURSO_TURNO}', $1, now() + interval '120 seconds')
+  ON CONFLICT (recurso) DO UPDATE SET dueno = EXCLUDED.dueno, vence = EXCLUDED.vence
+    WHERE agenda_turno.vence < now() OR agenda_turno.dueno = EXCLUDED.dueno
+  RETURNING dueno
+)
+SELECT count(*)::int AS tomado FROM t;` } },
+    { id: 'turno-tomado', name: '¿Turno tomado?', type: 'n8n-nodes-base.if', typeVersion: 2.2, position: [32, 320],
+      parameters: cond('tomado-c', '={{ $json.tomado }}', { type: 'number', operation: 'equals' }, 1) },
+    { id: 'turno-seguir', name: '¿Seguir esperando?', type: 'n8n-nodes-base.if', typeVersion: 2.2, position: [256, 480],
+      parameters: cond('seguir-c', `={{ $runIndex < ${INTENTOS_TURNO} }}`, esVerdad) },
+    { id: 'turno-esperar', name: 'Esperar turno', type: 'n8n-nodes-base.wait', typeVersion: 1.1, position: [32, 640],
+      webhookId: randomUUID(),
+      parameters: { resume: 'timeInterval', amount: 1, unit: 'seconds' } },
+    { id: 'turno-ocupada', name: 'Agenda ocupada', type: 'n8n-nodes-base.code', typeVersion: 2, position: [480, 480],
+      parameters: { jsCode: '' } },
+    { id: 'turno-liberar', name: 'Liberar turno', type: 'n8n-nodes-base.postgres', typeVersion: 2.6, position: [4976, 64],
+      credentials: PG,
+      parameters: { operation: 'executeQuery', options: { queryReplacement: '={{ $execution.id }}' },
+        query: `WITH d AS (
+  DELETE FROM agenda_turno WHERE recurso = '${RECURSO_TURNO}' AND dueno = $1 RETURNING 1
+)
+SELECT count(*)::int AS liberado FROM d;` } },
+    { id: 'turno-devolver', name: 'Devolver respuesta', type: 'n8n-nodes-base.code', typeVersion: 2, position: [5200, 64],
+      parameters: { jsCode: '' } },
+  ];
+  wf.nodes.push(...nuevos);
+
+  // Con las escrituras en fila, una ráfaga de reservas agota la cuota de Sheets (60 lecturas
+  // por minuto): el 429 tumbó "Guardar cliente" DESPUÉS de "Escribir cita" y dejó una cita sin
+  // ficha que el cliente vio como error (2026-09-23). 5 intentos x 5 s (el tope de n8n) cubren
+  // media ventana de cuota. "Escribir cita" sigue sin reintentos: su append no es idempotente.
+  for (const n of wf.nodes) {
+    if (n.retryOnFail && (n.type === 'n8n-nodes-base.googleSheets' || n.type === 'n8n-nodes-base.httpRequest')) {
+      n.maxTries = 5;
+      n.waitBetweenTries = 5000;
+    }
+  }
+
+  const a = (node) => ({ node, type: 'main', index: 0 });
+  const c = wf.connections;
+  if (JSON.stringify(c['Normalizar entrada']) !== JSON.stringify({ main: [[a('Leer todo el CRM')]] })) {
+    throw new Error('motor: "Normalizar entrada" ya no va directo a "Leer todo el CRM"; revisar la cola');
+  }
+  if (c.Respuesta) throw new Error('motor: "Respuesta" ya tiene salidas; revisar la cola');
+  c['Normalizar entrada'] = { main: [[a('¿Escribe?')]] };
+  c['¿Escribe?'] = { main: [[a('Tomar turno')], [a('Leer todo el CRM')]] };
+  c['Tomar turno'] = { main: [[a('¿Turno tomado?')]] };
+  c['¿Turno tomado?'] = { main: [[a('Leer todo el CRM')], [a('¿Seguir esperando?')]] };
+  c['¿Seguir esperando?'] = { main: [[a('Esperar turno')], [a('Agenda ocupada')]] };
+  c['Esperar turno'] = { main: [[a('Tomar turno')]] };
+  c['Agenda ocupada'] = { main: [[a('Respuesta')]] };
+  c.Respuesta = { main: [[a('Liberar turno')]] };
+  c['Liberar turno'] = { main: [[a('Devolver respuesta')]] };
+}
+
 // ---------------------------------------------------------------- por workflow
 const AJUSTES = {
   correos(wf) {
@@ -143,6 +236,7 @@ const AJUSTES = {
   },
 
   motor(wf) {
+    serializarEscrituras(wf);
     inyectarCodigo(wf, 'motor');
     // Entrada nueva: el nombre completo que el cliente le DICTA al agente. Va aparte de
     // `nombre_cliente` (el del perfil de WhatsApp) porque tienen prioridades distintas:
@@ -154,6 +248,15 @@ const AJUSTES = {
       name: 'nombre_dictado',
       type: 'string',
       value: "={{ $json.body ? ($json.body.nombre_dictado || '') : ($json.nombre_dictado || '') }}",
+    });
+    // Entrada nueva: CUÁL cita mover al reagendar. `fecha_texto` ahí es el destino, así que la
+    // cita de origen no tenía por dónde llegar (caso 7.3 del retest).
+    nodo(wf, 'Cuando el agente llama').parameters.workflowInputs.values.push({ name: 'cita_a_mover' });
+    nodo(wf, 'Normalizar entrada').parameters.assignments.assignments.push({
+      id: 'ne-cita_a_mover',
+      name: 'cita_a_mover',
+      type: 'string',
+      value: "={{ $json.body ? ($json.body.cita_a_mover || '') : ($json.cita_a_mover || '') }}",
     });
     wf = reemplazarTodo(wf, [[DM.workflows.correos, registro.correos], [NOMBRES.correos[0], NOMBRES.correos[1]]]);
     wf = mapearTextos(wf, prosa);
@@ -204,9 +307,8 @@ const AJUSTES = {
       // Mensaje Final" descarte lo que escribió el agente: tienen que sonar a persona, no a
       // acuse de recibo. Sin exclamaciones ni "con mucho gusto": la misma línea sale para
       // una consulta de horarios y para alguien que acaba de describir un dolor en el pecho.
-      mensaje_escalamiento_dentro_horario: 'Déjeme pasarle con una persona del equipo, que '
-        + 'le ayuda mejor con esto. En unos minutos le escribe por aquí mismo. Aquí le '
-        + 'esperamos.',
+      mensaje_escalamiento_dentro_horario: 'Ya le aviso a una persona del equipo para que le '
+        + 'ayude; en unos minutos le escribe por aquí mismo.',
       // La frase del 9-1-1 tapa un hueco real: fuera de horario, ante una señal de alarma
       // de salud el prompt le ordena al agente decir "busque atención médica de inmediato",
       // pero "Preparar Mensaje Final" reemplaza esa respuesta por esta línea enlatada. Sin
@@ -250,6 +352,12 @@ const AJUSTES = {
       const v = nodo(wf, t).parameters.workflowInputs.value;
       for (const k of Object.keys(v)) {
         v[k] = v[k].replace(/\bPACIENTE\b/g, 'CLIENTE').replace(/\bpaciente\b/g, 'cliente');
+      }
+      if (t === 'reagendar_cita') {
+        // CUÁL cita mover: `fecha_texto` es el destino y no alcanzaba (caso 7.3 del retest).
+        v.cita_a_mover = `={{ $fromAI('cita_a_mover', "LAS PALABRAS DEL CLIENTE que dicen CUÁL cita quiere mover (el servicio o el día de la cita que YA tiene), copiadas tal cual: \\"la de yoga\\", \\"la del martes\\". NO es el destino. Vacío si tiene una sola cita o no dijo cuál.", 'string') }}`;
+        nodo(wf, t).parameters.workflowInputs.schema.push({ id: 'cita_a_mover', displayName: 'cita_a_mover',
+          required: false, defaultMatch: false, display: true, canBeUsedToMatch: true, type: 'string' });
       }
     }
     // --- herramienta NUEVA: `mis_citas`, de solo lectura

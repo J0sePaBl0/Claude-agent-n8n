@@ -37,6 +37,11 @@ agente trate a la persona por su nombre real y no le vuelva a pedir datos que ya
   espacio se cierra recién al llenarse. Solo se le pone cupo > 1 a un servicio cuyos
   `entrenadores_habilitados` son filas `CLS-*`, dedicadas a esa clase: si colgara de un
   entrenador de planta, las inscripciones le taparían su agenda 1 a 1.
+- **`cupo` = `0` escrito a propósito es una clase cerrada** (no se ofrece ni se reserva); vacío es
+  1 a 1. Sirve para llenar una clase a mano.
+- **Reagendar**: `fecha_texto` es el DESTINO; la cita de origen llega en `cita_a_mover` ("la de
+  Full Body", "la del martes") y se compara con el servicio y el día de cada cita. Si no calza
+  o empata, repregunta (`ambiguo_cual_cita`) en vez de elegir.
 - Nadie puede inscribirse dos veces a la misma clase (`motivo: "ya_inscrito"`), porque gastaría
   dos campos de los que quedan.
 - **Los teléfonos se guardan como `(+506) 8888-9999`, nunca con `+` adelante**: Google Sheets
@@ -58,14 +63,18 @@ del entrenador. Si el día pedido queda vacío, segunda pasada con malla de 15 m
 
 Nunca vacío ni un "no hay" pelado: siempre `mensaje` redactado y `alternativas`. Valores fijos de
 `motivo`: `servicio_no_disponible`, `feriado`, `cerrado`, `dia_no_habilitado`, `dia_lleno`,
-`ambiguo`, `no_coincide`, `fuera_de_horario`, `sin_citas`, `token_invalido`, `cita_no_activa`,
-`ya_inscrito`. Además de los horarios, la salida lleva `es_clase_grupal`, `nombre_registrado` y
+`ambiguo`, `ambiguo_cual_cita`, `no_coincide`, `fuera_de_horario`, `sin_citas`, `token_invalido`,
+`cita_no_activa`, `ya_inscrito`, `agenda_ocupada`. Además de los horarios, la salida lleva `es_clase_grupal`, `nombre_registrado` y
 `email_registrado`.
 
 ### Limitaciones conocidas
 
-- **Google Sheets no da atomicidad.** `Confirmar y preparar` re-verifica que el espacio siga
-  libre justo antes de escribir. Alcanza para un demo, no para producción.
+- **Google Sheets no da atomicidad → cola.** Toda acción que escribe (agendar, confirmar,
+  cancelar, reagendar) toma un turno en Postgres (`agenda_turno`) antes de `Leer todo el CRM` y
+  lo suelta en `Liberar turno`, después de `Respuesta`: las escrituras van de a una y la
+  lectura del cupo y de los ids nuevos siempre es fresca. Quien no tiene turno espera de a 1 s
+  (hasta ~2 min → `agenda_ocupada`). El turno vence a los 120 s por si una ejecución se cae.
+  Las consultas no hacen cola.
 - `Escribir cita` no tiene reintentos a propósito: `values:append` no es idempotente.
 - **`Webhook de prueba` (`/agenda-test-american-gym`)** es para probar el motor aislado.
   Deshabilitalo antes de dar el demo: no tiene autenticación.

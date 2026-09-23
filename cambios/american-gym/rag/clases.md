@@ -5,8 +5,6 @@ que confirma la agenda al momento de reservar.
 
 ## American Experiences — cronograma semanal
 
-Las clases de American Experiences están incluidas en la membresía de American Gym.
-
 | Día | Hora | Clase | Instructor |
 |---|---|---|---|
 | Lunes | 5:00 p. m. | Pilates Experience (Pilates Animal) | Patricia Arias Cordero |
@@ -53,6 +51,6 @@ Head Coach: Hernán Araneda Spinelli. Coaches: Julia Acuña y Andrei Quesada San
 Además de las clases, en American Gym se puede reservar por WhatsApp:
 
 - **Valoración física inicial:** primera cita con un entrenador para medir condición
-  física, conversar objetivos y armar el plan. Sin costo.
-- **Entrenamiento personal 1 a 1:** sesión individual con un entrenador de planta.
+  física, conversar objetivos y armar el plan. Está incluida con las membresías del gimnasio, sin
+  costo adicional.
 - **Rutina personalizada:** cita para armar o actualizar la rutina de entrenamiento.

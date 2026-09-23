@@ -3,7 +3,7 @@
 ## Entrenadores de planta (American Gym)
 
 Son quienes están en el piso del gimnasio y con quienes se agendan la valoración física
-inicial, el entrenamiento personal 1 a 1 y la rutina personalizada.
+inicial y la rutina personalizada.
 
 - Nicole Arguedas Carranza — **Head Coach de planta**
 - Mario Cruz Rojas

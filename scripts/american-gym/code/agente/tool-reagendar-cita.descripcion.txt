@@ -1,7 +1,10 @@
 Mueve una cita que el cliente ya tiene a otro día u hora. Es UNA sola llamada: no
 canceles y vuelvas a agendar.
 En fecha_texto va PARA CUÁNDO la quiere, con día Y hora, en las palabras del cliente.
+En cita_a_mover va CUÁL cita quiere mover, con sus palabras (el servicio o el día): "la de
+yoga", "la del martes". Si tiene una sola cita, o no dijo cuál, dejalo vacío.
 Consultá disponibilidad antes si no sabés qué espacios hay.
-Si devuelve "ambiguo" puede ser que tenga varias citas o que ese día haya varios espacios:
-mirá el mensaje y repreguntá con lo que trae.
+Si devuelve "ambiguo_cual_cita" tiene varias citas y no quedó claro cuál: repreguntá con la
+lista que trae y, apenas responda, volvé a llamar con lo que dijo en cita_a_mover.
+Si devuelve "ambiguo" es que ese día hay varios espacios: mirá el mensaje y repreguntá.
 La cita queda como REPROGRAMADA y el gimnasio la confirma 24 horas antes.

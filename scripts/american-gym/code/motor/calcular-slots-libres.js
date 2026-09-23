@@ -60,7 +60,11 @@ const duracion = parseInt(txt(servicio.duracion_min), 10) || 30;
 // Regla de modelado: un cupo > 1 solo tiene sentido si el `entrenador` habilitado es una
 // fila dedicada a esa clase (CLS-*). Si se le pusiera cupo a un servicio 1 a 1, el motor
 // dejaría reservar al mismo entrenador dos veces a la misma hora.
-const cupo = Math.max(1, parseInt(txt(servicio.cupo), 10) || 1);
+// `0` escrito a propósito = clase cerrada, sin campos (no se ofrece ni se puede reservar); vacío
+// o no numérico = 1 (cita 1 a 1). Antes el `|| 1` tragaba el 0 y una clase "llena" a mano
+// seguía aceptando reservas (caso 6.4 del retest).
+const cupoCrudo = parseInt(txt(servicio.cupo), 10);
+const cupo = Number.isNaN(cupoCrudo) ? 1 : Math.max(0, cupoCrudo);
 
 // ---------- 2. Entrenadores elegibles ----------
 const habilitados = txt(servicio.entrenadores_habilitados).split(';').map(txt).filter(Boolean);

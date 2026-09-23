@@ -58,6 +58,26 @@ const citaPublica = (c) => ({
   id_cita: txt(c.id_cita), estado: txt(c.estado), servicio: nombreServicio(c.id_servicio),
 });
 
+// Palabras que no identifican una cita: "quiero mover la cita de la clase para mañana".
+const RELLENO = new Set(['cita', 'citas', 'clase', 'clases', 'para', 'esta', 'esa', 'ese', 'del', 'las',
+  'los', 'una', 'mis', 'con', 'por', 'que', 'quiero', 'mover', 'muevame', 'cambiar', 'cambieme',
+  'reagendar', 'pasar', 'pasela', 'pase', 'hora', 'dia', 'mismo', 'misma', 'otra', 'tarde', 'manana',
+  'noche']);
+const sinTildes = (s) => txt(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// Se queda con las citas que mejor calzan con lo que dijo el cliente (servicio o día). Si no
+// reconoce nada, o empatan, devuelve la lista entera y el motor repregunta: nunca elige a
+// ciegas.
+function filtrarPorLoDicho(lista, dicho) {
+  const palabras = sinTildes(dicho).split(/[^a-z0-9]+/).filter((p) => p.length >= 3 && !RELLENO.has(p));
+  if (!palabras.length) return lista;
+  const puntuadas = lista.map((c) => {
+    const pajar = sinTildes(`${nombreServicio(c.id_servicio)} ${enEspanol(c)} ${txt(c.fecha)} ${txt(c.id_cita)}`);
+    return { c, n: palabras.filter((p) => pajar.includes(p)).length };
+  });
+  const mejor = Math.max(...puntuadas.map((p) => p.n));
+  return mejor === 0 ? lista : puntuadas.filter((p) => p.n === mejor).map((p) => p.c);
+}
+
 const buscarCliente = (tel) => (tel
   ? datos.clientes.find((p) => digitos(p.telefono) && digitos(p.telefono) === tel) || null
   : null);
@@ -202,9 +222,16 @@ if (token) {
       'No tiene citas próximas agendadas. ¿Quiere que le busque un espacio?');
   }
 
-  // Si el cliente dijo de cuál habla ("la del jueves"), se filtra por lo que entendió el
-  // resolver de fechas. Reusa esa pieza en vez de repetir un mini-parser acá.
-  if (suyas.length > 1 && pedido.dia_especifico) {
+  if (suyas.length > 1 && accion === 'reagendar') {
+    // En `reagendar`, `fecha_texto` es el DESTINO ("el jueves a las 6"), no la cita de origen:
+    // filtrar por ese día movía la cita equivocada cuando el destino coincidía con el día de
+    // OTRA cita (2026-09-16, caso 7.3 del retest) y no encontraba nada cuando no coincidía.
+    // La cita de origen llega aparte, en `cita_a_mover`, con las palabras del cliente
+    // ("la de Full Body", "la del martes"); se compara contra el servicio y el día de cada una.
+    suyas = filtrarPorLoDicho(suyas, entrada.cita_a_mover);
+  } else if (suyas.length > 1 && pedido.dia_especifico) {
+    // Si el cliente dijo de cuál habla ("la del jueves"), se filtra por lo que entendió el
+    // resolver de fechas. Reusa esa pieza en vez de repetir un mini-parser acá.
     const delDia = suyas.filter((c) => txt(c.fecha) === pedido.desde);
     if (delDia.length) suyas = delDia;
   }
@@ -213,7 +240,12 @@ if (token) {
   // algo no existe: es el bug del 2026-08-07 con otro disfraz.
   if (suyas.length > 1) {
     const cuál = suyas.length === 2 ? '¿Cuál de las dos?' : '¿Cuál de ellas?';
-    return fallar('ambiguo',
+    // Motivo DISTINTO al 'ambiguo' que devuelve "Resolver slot pedido": ese es sobre qué
+    // HORARIO del día, este es sobre qué CITA existente. Comparten nombre genérico antes
+    // (2026-09-16) y el modelo confundía las dos instrucciones: al ver 'ambiguo' aplicaba
+    // la regla de reagendar ("si ya dio la hora, reintentá") en vez de preguntar cuál cita
+    // era, y terminaba moviendo la que no era.
+    return fallar('ambiguo_cual_cita',
       `Tiene ${suyas.length} citas próximas: ${suyas.map(enEspanol).join('; ')}. ${cuál}`,
       suyas.map(publico));
   }

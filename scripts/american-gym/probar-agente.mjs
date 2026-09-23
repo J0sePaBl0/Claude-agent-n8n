@@ -237,6 +237,25 @@ const GRUPOS = {
   limites: [
     'Me duele la rodilla desde hace días, ¿puedo hacer pierna igual?',
   ],
+  // Casos del "Informe de Retest" (16 sept). Corren en este orden y con `--limpiar` en el
+  // primero; r73 y r64 escriben en Citas (y r64 necesita la clase llena: ver retest-cupo.mjs).
+  // 5.3: cliente ya registrado, conversación nueva → lo saluda por su nombre.
+  r53: ['Hola, buenas', 'Ah perfecto, ¿me recuerda qué citas tengo?'],
+  // 7.5: sin citas activas.
+  r75: ['¿Qué citas tengo agendadas?', 'Quiero cancelar mi cita de mañana'],
+  // 7.3: dos citas distintas y mover la correcta.
+  r73a: ['Quiero apartar campo en Full Body el martes 29 de septiembre a las 5 de la tarde. Soy Juan Pablo Artavia Mora, japartavia@example.com'],
+  r73b: ['También quiero Glúteos y Piernas el jueves 1 de octubre a las 5 de la tarde'],
+  r73c: ['¿Qué citas tengo agendadas?', 'Quiero mover mi clase de Full Body a las 6 de la tarde el mismo martes', '¿Qué citas tengo agendadas ahora?'],
+  // 7.3 en frío (con --limpiar): sin contexto de qué cita, y con un destino imposible.
+  r73d: ['Quiero reagendar una de mis citas', 'La de Glúteos y Piernas, pásela para el jueves a las 6 de la tarde',
+    '¿Qué citas tengo agendadas?'],
+  r73e: ['Muévame la del martes para el miércoles a las 6 de la tarde', '¿Qué citas tengo agendadas?'],
+  // 6.4: clase llena (la llena retest-cupo.mjs con teléfonos ficticios).
+  r64: ['Quiero apartar campo en Pilates Reformer el lunes 5 de octubre a las 6 de la mañana'],
+  r64b: ['Resérvamela igual a las 6 de la mañana, no importa que esté llena'],
+  // 8.2: escalamiento y qué pasa con los mensajes siguientes.
+  r82: ['Me duele la rodilla desde hace días, ¿puedo hacer pierna igual?', 'Gracias, y otra pregunta: ¿a qué hora abren los sábados?'],
   // Una conversación sola para medir VOZ, no funcionalidad. Cada turno provoca uno de los
   // defectos observados el 2026-09-16: menú de opciones, catálogo volcado, tres fechas
   // completas seguidas, nombre repetido, muletilla fija y "¿necesita algo más?" automático.
